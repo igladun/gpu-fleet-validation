@@ -82,6 +82,14 @@ class TestDist(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.node.out, "results.jsonl")))
         self.assertEqual(self.node.calls(), [])
 
+    def test_committed_file_is_current(self):
+        """The README curls gfv-accept.sh from the repo, so the committed file must match the sources."""
+        with open(self.dist, "rb") as f:
+            fresh = f.read()
+        with open(os.path.join(REPO, "gfv-accept.sh"), "rb") as f:
+            committed = f.read()
+        self.assertTrue(fresh == committed, "gfv-accept.sh is stale: run scripts/build-dist.sh and commit it")
+
     def test_version_and_exit_codes_pass_through(self):
         p = subprocess.run(["bash", self.dist, "accept", "--class", "nope"], env=self.env(), capture_output=True,
                            text=True, timeout=60)
