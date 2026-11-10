@@ -1,0 +1,24 @@
+{
+  "nccl_tests": {
+    "repo": "https://github.com/NVIDIA/nccl-tests",
+    "tag": "v2.21.1",
+    "commit": "afd59abab774a6a4b492eb344bd0c845a0b7bb4d"
+  },
+  "cuda_repo": {
+    "base_url": "https://developer.download.nvidia.com/compute/cuda/repos",
+    "keyring_version": "1.1-1"
+  },
+  "dcgm": {
+    "package": "datacenter-gpu-manager-4-cuda{cuda_major}",
+    "version": "1:4.8.0-1"
+  },
+  "apt_tools": {
+    "fio": "fio",
+    "lspci": "pciutils",
+    "mokutil": "mokutil",
+    "git": "git",
+    "make": "build-essential",
+    "g++": "build-essential",
+    "ib_write_bw": "perftest"
+  }
+}
