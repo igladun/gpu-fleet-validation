@@ -1,4 +1,4 @@
-"""Command line: `python3 -m gfv <command>` or `bash gfv-accept.sh <command>`."""
+"""Command line: `python3 -m gfv <command>`, `python3 gfv.pyz <command>` or `bash gfv.sh <command>`."""
 
 import argparse
 import sys

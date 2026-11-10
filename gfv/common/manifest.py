@@ -1,7 +1,7 @@
 """Node-class manifests: the expected hardware, software and performance of one node class.
 
-Source files are TOML (manifests/*.toml). The single-file build converts them to JSON and bundles
-them into the package, so a node needs no TOML parser; --manifest also accepts JSON."""
+Source files are TOML (manifests/*.toml). The release build converts them to JSON and bundles
+them into gfv.pyz, so a node needs no TOML parser; --manifest also accepts JSON."""
 
 import json
 import os
@@ -27,8 +27,8 @@ def _parse(text, name):
         try:
             import tomllib
         except ImportError as e:
-            raise ManifestError(f"{name}: reading TOML needs Python 3.11+; use the built single file "
-                                "(manifests are bundled as JSON) or pass a JSON manifest") from e
+            raise ManifestError(f"{name}: reading TOML needs Python 3.11+; use gfv.sh or gfv.pyz from a "
+                                "release (manifests are bundled as JSON) or pass a JSON manifest") from e
         try:
             return tomllib.loads(text)
         except tomllib.TOMLDecodeError as e:

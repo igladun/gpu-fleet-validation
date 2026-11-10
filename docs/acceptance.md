@@ -10,19 +10,19 @@ It runs on the node as root and installs the test tools it needs. The node passe
 ## Running it
 
 ```sh
-# straight from GitHub
-curl -fsSL https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh | sudo bash -s -- accept --class hgx-h100-8x
+# latest release
+curl -fsSL https://github.com/igladun/gpu-fleet-validation/releases/latest/download/gfv.sh | sudo bash -s -- accept --class hgx-h100-8x
 
-# or download once, then run
-curl -fsSLO https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh
-sudo bash gfv-accept.sh accept --class hgx-h100-8x                 # bundled class manifest
-sudo bash gfv-accept.sh accept --manifest my-class.json             # your own manifest
-bash gfv-accept.sh accept --class hgx-h100-8x --dry-run             # print the plan only (no root)
+# or download the launcher once, then run
+curl -fsSLO https://github.com/igladun/gpu-fleet-validation/releases/latest/download/gfv.sh
+sudo bash gfv.sh accept --class hgx-h100-8x                 # bundled class manifest
+sudo bash gfv.sh accept --manifest my-class.json             # your own manifest
+bash gfv.sh accept --class hgx-h100-8x --dry-run             # print the plan only (no root)
 ```
 
-To pin a version, replace `main` in the URL with a commit SHA.
+`gfv.sh` downloads `gfv.pyz` from its own release and checks its sha256 before running it. To pin a version, replace `latest/download` with `download/v<version>`. When the node can't reach GitHub, copy `gfv.sh` and `gfv.pyz` from the same release and run `sudo GFV_PYZ="$PWD/gfv.pyz" bash gfv.sh accept …`; the launcher still checks the sha256. See [Tool install](#tool-install) for what the install stage still downloads.
 
-From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A checkout run needs Python 3.11+ to read the TOML manifests; the single file needs only 3.10.
+From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A checkout run needs Python 3.11+ to read the TOML manifests; `gfv.pyz` bundles them as JSON and needs only 3.10.
 
 | Option | Meaning |
 |---|---|
@@ -42,6 +42,7 @@ From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A chec
 - `0`: the node passed.
 - `1`: at least one `fail` or `error`.
 - `2`: the gate could not run. Causes:
+  - the launcher could not download `gfv.pyz`, or its sha256 did not match
   - not root
   - a bad manifest, or no stages selected
   - a non-empty `--out`
@@ -49,6 +50,8 @@ From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A chec
   - the GPU process list cannot be read
   - GPU processes running without `--force`
   - the run was interrupted (SIGTERM, SIGHUP, Ctrl-C) before it finished
+
+With `curl … | sudo bash`, a failed download gives bash an empty script, and the pipe exits 0. Automation must download first or use `set -o pipefail`, and read `results.jsonl`, not only the exit code.
 
 A partial run (`--only`/`--skip`) exits `1` unless `--allow-partial` is given. Every stage it left out is recorded as `<stage>.not_selected`.
 
@@ -190,10 +193,10 @@ Re-measure the floors on the first healthy nodes of each class. Never copy floor
 ## Runbook
 
 1. Drain the node from the scheduler. Stop anything using the GPUs: training, inference servers, notebooks.
-2. Download the single file and run it as root. Use `tmux` or `nohup` so the run survives a dropped ssh session. Under `nohup`, SIGHUP stays ignored; any other SIGHUP or SIGTERM stops the run cleanly with exit 2:
+2. Download the launcher and run it as root. Use `tmux` or `nohup` so the run survives a dropped ssh session. Under `nohup`, SIGHUP stays ignored; any other SIGHUP or SIGTERM stops the run cleanly with exit 2:
    ```sh
-   curl -fsSLO https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh
-   sudo nohup bash gfv-accept.sh accept --class hgx-h100-8x --node "$(hostname)" > accept.jsonl 2> accept.log &
+   curl -fsSLO https://github.com/igladun/gpu-fleet-validation/releases/latest/download/gfv.sh
+   sudo nohup bash gfv.sh accept --class hgx-h100-8x --node "$(hostname)" > accept.jsonl 2> accept.log &
    tail -f accept.log
    ```
 3. Read `SUMMARY.md` in the evidence directory and archive the whole directory.
@@ -207,6 +210,7 @@ The runner has only run against recorded output so far. The first run on a real 
 - **Newer tool versions.** The recorded output is from nccl-tests 2.20.0 and DCGM 4.6.1, but the installer pins nccl-tests 2.21.1 and DCGM 4.8.0. Confirm the log header and the level-3 test names are unchanged.
 - **ACS on real switches.** Confirm the switch ports above the GPUs and NICs expose ACS controls; a node where none do fails with `error`.
 - **Loopback ring.** `ib_write_bw` loopback uses `127.0.0.1` for the connection exchange and the IB fabric for the data. Confirm all 8 rails report bandwidth.
+- **Signals through sudo.** Start the run with `sudo nohup bash gfv.sh …`, send SIGTERM to the `sudo` process, and confirm the run stops with exit 2.
 - **Host engine.** With the node's own DCGM service running, confirm the runner reuses it and does not start a second one.
 - **GPU0/1 PCIe finding.** Settle the 76 GB/s bidirectional PCIe on GPU 0 and GPU 1. A DCGM host-memory placement artifact means adjusting the check; otherwise it is a real fault.
 - **Manifest values.** Re-measure the floors. Set `secure_boot`, `pcie_acs` and `kernel_cmdline_contains` to what the class really runs, then fill the firmware allowlists from the recorded values.

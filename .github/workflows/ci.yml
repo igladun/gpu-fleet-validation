@@ -49,24 +49,24 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.12"
+          # The last one is the default python3 (it builds); the release assets are also run on 3.10.
+          python-version: |
+            3.10
+            3.12
 
       - name: Lint shell scripts
-        run: shellcheck scripts/*.sh tests/fakebin/_shim.sh
+        run: shellcheck scripts/*.sh tests/fakebin/_shim.sh gfv-accept.sh
 
-      - name: Committed single file matches the sources
+      - name: Build the release assets
+        run: scripts/build-dist.sh
+
+      - name: Build is reproducible
         run: |
           set -euo pipefail
-          DIST_DIR=dist scripts/build-dist.sh
-          cmp dist/gfv-accept.sh gfv-accept.sh || {
-            echo "::error file=gfv-accept.sh::stale: run scripts/build-dist.sh and commit gfv-accept.sh"
-            exit 1
-          }
+          DIST_DIR=dist2 scripts/build-dist.sh
+          for f in gfv.pyz gfv.sh SHA256SUMS; do cmp "dist/$f" "dist2/$f"; done
 
-      - name: Check the single file
-        run: |
-          set -euo pipefail
-          shellcheck gfv-accept.sh
-          bash gfv-accept.sh version
-          bash gfv-accept.sh accept --class hgx-h100-8x --dry-run
-          bash -s -- accept --class hgx-h100-8x --dry-run < gfv-accept.sh
+      - name: Check the release assets on every Python
+        env:
+          CHECK_PYTHONS: "3.10 3.12"
+        run: scripts/check-dist.sh dist
