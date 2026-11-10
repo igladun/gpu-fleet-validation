@@ -26,12 +26,13 @@ gfv_main() {
     gfv_python_ok || { echo "gfv: python3 >= 3.10 is required" >&2; exit 2; }
   fi
   local tmp rc=0
-  tmp=$(mktemp -d "${TMPDIR:-/tmp}/gfv.XXXXXX")
+  tmp=$(mktemp -d "${TMPDIR:-/tmp}/gfv.XXXXXX") || { echo "gfv: mktemp failed" >&2; exit 2; }
   # shellcheck disable=SC2064  # expand $tmp now: the trap runs after this function returns
   trap "rm -rf '$tmp'" EXIT
-  gfv_payload | python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' \
-    >"$tmp/gfv.pyz"
-  python3 "$tmp/gfv.pyz" "$@" </dev/null || rc=$?
+  # -I: isolated mode, so modules planted in the current directory are never imported (we run as root).
+  gfv_payload | python3 -I -c 'import base64, sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' \
+    >"$tmp/gfv.pyz" || { echo "gfv: could not unpack the payload" >&2; exit 2; }
+  python3 -I "$tmp/gfv.pyz" "$@" </dev/null || rc=$?
   exit "$rc"
 }
 
