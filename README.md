@@ -29,7 +29,7 @@ L2 runs on the node itself, as root. It checks the node against its class manife
 - **fio:** optional local-storage floors.
 - **Health deltas:** XIDs, ECC, remapped rows, and IB and NVLink error counters, compared before and after the load.
 
-The runner installs the tools it needs (DCGM, perftest, fio, a pinned nccl-tests build). It never touches the GPU driver, Fabric Manager, OFED/DOCA or the kernel. A run takes about 30–40 minutes. Most of that is DCGM level 3. The first run adds about 5–10 minutes for installs.
+The runner installs the tools it needs (DCGM, perftest, fio, a pinned nccl-tests build). Every apt change is simulated first and refused if it would remove anything, pull in a driver or kernel package, or upgrade the stack under test. Other dependency upgrades are listed in the results. A temporary NVIDIA CUDA apt repo is removed again afterwards. It never touches the GPU driver, Fabric Manager, OFED/DOCA or the kernel. To pre-stage the tools, e.g. in an image bake: `--only install --allow-partial`. A run takes about 30–40 minutes. Most of that is DCGM level 3. The first run adds about 5–10 minutes for installs.
 
 ```sh
 scripts/build-dist.sh                                   # -> dist/gfv-accept.sh, one self-contained file
