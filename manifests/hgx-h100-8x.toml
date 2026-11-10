@@ -1,0 +1,52 @@
+# Node-class manifest: what a healthy node of this class looks like.
+# Expected values live here, never in test code. Floors = healthy reference minus margin;
+# re-measure them on your own first healthy nodes and never copy floors between classes.
+# Keys documented in docs/acceptance.md. Sections a tier does not read are ignored by it.
+
+[class."hgx-h100-8x"]
+gpus = 8
+gpu_name = "NVIDIA H100 80GB HBM3"
+driver = "580.178.04"
+cuda = "13.0"                    # CUDA version reported by the driver (nvidia-smi header)
+nccl = "2.28.9"                  # NCCL used by the acceptance nccl-tests build (must exist for the driver's CUDA)
+pcie_width = 16
+nvlinks_total = 144              # 8 GPUs x 18
+nvswitches = 4                   # counted on the PCI bus; DCGM reports 0 if libnvidia-nscq is missing
+nvswitch_pci_device = "22a3"     # PCI device ID of the NVSwitch generation (H100 HGX)
+rdma_nics = 8                    # one per GPU, rail-aligned
+rdma_rate_gbps = 400
+rdma_link_layer = "InfiniBand"   # RoCE classes: "Ethernet" (RDMA bandwidth check is skipped in v1)
+numa_nodes = 2
+
+[class."hgx-h100-8x".k8s]        # read by the in-cluster tiers, not by host-mode L2
+gpu_resource = "nvidia.com/gpu"
+rdma_resource = "rdma/rdma_shared_device_a"
+cpu_manager_policy = "static"
+topology_manager_policy = "restricted"   # single-numa-node rejects 8-GPU pods
+topology_manager_scope = "pod"
+min_dev_shm_gib = 16
+
+[class."hgx-h100-8x".host]
+kernel_cmdline_contains = ["iommu=pt"]
+pcie_acs = "disabled"            # GPUDirect P2P / RDMA across PCIe switches
+power_profile = "performance"    # BIOS attribute; needs BMC/Redfish, reported as skip by host-mode L2
+secure_boot = true
+nvidia_peermem = true            # GPUDirect RDMA kernel module loaded
+
+[class."hgx-h100-8x".firmware]   # allowlists; an empty list records the value without enforcing it
+bios = []
+bmc = []                         # needs BMC/Redfish, reported as skip by host-mode L2
+nic = []
+gpu_vbios = []
+
+[class."hgx-h100-8x".perf]       # floors = healthy reference minus margin
+nccl_allreduce_busbw_gbs_1node = 455   # measured 478.6 @ 8 GiB with NVLS
+rdma_write_bw_gbps = 350               # measured 365-368 loopback, single QP, 64 KiB
+dcgm_pcie_bidir_gbs = 95               # measured ~101 on 6 of 8 GPUs, 76 on the other two
+
+# Optional local-storage check (fio). Uncomment and point at a scratch filesystem.
+# [class."hgx-h100-8x".storage]
+# path = "/mnt/local-nvme"
+# size_gib = 16
+# seq_write_gbs = 2.0
+# seq_read_gbs = 3.0
