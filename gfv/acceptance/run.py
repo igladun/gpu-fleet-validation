@@ -100,8 +100,7 @@ def accept(args):
     context = {"run_id": run_id, "cluster": args.cluster, "node": args.node, "class": cls, "rack": args.rack,
                "leaf": args.leaf, "pod": None, "tier": "L2"}
     rec = Recorder(context, out_dir)
-    info = build_info()
-    rec.versions["gfv"] = f"{info['version']} ({info['commit']})"
+    rec.versions["gfv"] = build_info()["label"]
     ctx = Ctx(args, cls, spec, out_dir, Proc(out_dir), SysFS(os.environ.get("GFV_SYSROOT", "/")), rec,
               settle=float(os.environ.get("GFV_SETTLE_SECONDS", "1.5")))
     print(f"gfv L2 acceptance {run_id}: node {args.node}, class {cls} ({source}), stages {','.join(stages)}",

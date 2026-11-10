@@ -23,8 +23,7 @@ def main(argv=None):
             print(f"{cls}\t{source}")
         return 0
     if args.command == "version":
-        info = build_info()
-        print(f"gfv {info['version']} ({info['commit']})")
+        print(f"gfv {build_info()['label']}")
         return 0
     p.print_help(sys.stderr)
     return 2

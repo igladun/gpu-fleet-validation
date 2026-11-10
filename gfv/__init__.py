@@ -15,11 +15,11 @@ def package_data(name):
 
 
 def build_info():
-    """Version, commit and build date written by scripts/build-dist.sh; checkout runs report 'source'."""
+    """Version and source hash written by scripts/build-dist.sh; checkout runs report 'checkout'."""
     raw = package_data("_build.json")
-    info = json.loads(raw) if raw else {"commit": "source", "built": None}
-    info["version"] = __version__
-    return info
+    source = json.loads(raw).get("source") if raw else None
+    return {"version": __version__, "source": source,
+            "label": f"{__version__} (src {source})" if source else f"{__version__} (checkout)"}
 
 
 def tools_lock():
