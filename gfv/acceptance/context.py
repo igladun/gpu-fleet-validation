@@ -30,7 +30,7 @@ class Ctx:
 
     # --- tools ------------------------------------------------------------------------------
     def env_extra(self):
-        env = {}
+        env = {"CUDA_DEVICE_ORDER": "PCI_BUS_ID"}     # CUDA device N == nvidia-smi GPU N
         if self.tool_path:
             env["PATH"] = os.pathsep.join(self.tool_path + [self.proc.env.get("PATH", "")])
         if self.ld_path:

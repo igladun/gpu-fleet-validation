@@ -117,3 +117,51 @@
 
 0000:c1:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
 	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:09:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:17:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:3a:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:43:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:86:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:8f:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:b7:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:c0:00.1 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-

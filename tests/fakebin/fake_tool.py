@@ -108,6 +108,8 @@ def ib_write_bw():
 
 
 def simple():
+    if TOOL == "dpkg-query" and ARGS[-1] == "cuda-keyring":
+        out("ii " if has("keyring-installed") else "", 0 if has("keyring-installed") else 1)
     table = {
         "mokutil": ("mokutil.txt", 0),
         "ofed_info": ("ofed-info.txt", 0),
@@ -152,6 +154,11 @@ def main():
 # --- package-management fakes (install tests) -------------------------------------------------
 def install_tools():
     if TOOL == "apt-get":
+        if ARGS[:1] == ["-s"]:             # simulation: scenario file, else a clean "new packages only" plan
+            if has("apt-sim.txt"):
+                out(fixture("apt-sim.txt"))
+            pkgs = [a.split("=")[0] for a in ARGS[2:] if not a.startswith("-")]
+            out("".join(f"Inst {p} (1.0-1 fake [amd64])\n" for p in pkgs))
         if ARGS[:1] == ["download"]:
             for spec in ARGS[1:]:
                 name, ver = spec.split("=")
@@ -171,8 +178,13 @@ def install_tools():
         out(fixture("apt-madison.txt"))
     if TOOL == "dpkg":
         d = os.path.join(ROOT, "etc/apt/sources.list.d")
+        listing = os.path.join(d, "cuda-ubuntu2404-x86_64.list")
+        if ARGS[:1] == ["--purge"]:
+            if os.path.exists(listing):
+                os.remove(listing)
+            out("")
         os.makedirs(d, exist_ok=True)
-        with open(os.path.join(d, "cuda-ubuntu2404-x86_64.list"), "w") as f:
+        with open(listing, "w") as f:
             f.write("deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] "
                     "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /\n")
         out("")

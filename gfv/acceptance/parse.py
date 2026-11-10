@@ -12,7 +12,7 @@ GPU_FIELDS = [
     "index", "uuid", "name", "pci.bus_id", "driver_version", "vbios_version", "serial",
     "persistence_mode", "mig.mode.current", "pcie.link.width.current", "pcie.link.width.max",
     "pcie.link.gen.current", "pcie.link.gen.max", "ecc.errors.uncorrected.volatile.total",
-    "ecc.errors.uncorrected.aggregate.total", "compute_cap",
+    "ecc.errors.uncorrected.aggregate.total", "compute_cap", "ecc.mode.current",
 ]
 REMAP_FIELDS = ["gpu_bus_id", "remapped_rows.correctable", "remapped_rows.uncorrectable",
                 "remapped_rows.pending", "remapped_rows.failure"]
@@ -29,8 +29,8 @@ def norm_bus(bus):
     if bus.startswith("pci:"):
         bus = bus[4:]
     parts = bus.split(":")
-    if len(parts) == 3:
-        parts[0] = parts[0][-4:].rjust(4, "0")
+    if len(parts) == 3:              # nvidia-smi prints 8 hex digits; sysfs uses at least 4 (VMD: 10000)
+        parts[0] = f"{int(parts[0], 16):04x}"
     elif len(parts) == 2:
         parts.insert(0, "0000")
     out = ":".join(parts)
@@ -194,12 +194,20 @@ DCGM_STATUS = {"pass": "pass", "skip": "skip", "warn": "warn", "fail": "fail"}
 
 
 def dcgm_diag(text):
-    """`dcgmi diag -r N -j` -> one row per (test, entity)."""
+    """`dcgmi diag -r N -j` (DCGM 4.x) -> (rows, tests, metadata).
+    rows: one per (test, entity); tests: {name: {"summary": status, "messages": [...]}}."""
     doc = json.loads(text)
+    if not isinstance(doc, dict):
+        raise ValueError("diag JSON is not an object")
     root = doc.get("DCGM Diagnostic", doc)
-    rows = []
+    rows, tests = [], {}
     for cat in root.get("test_categories", []):
-        for test in cat.get("tests", []):
+        for n, test in enumerate(cat.get("tests", [])):
+            test["name"] = test.get("name") or f"unnamed-{cat.get('category')}-{n}"
+            summary = test.get("test_summary") or {}
+            tmsgs = [w.get("message", w.get("msg", str(w))) if isinstance(w, dict) else str(w)
+                     for key in ("warnings", "errors") for w in (summary.get(key) or test.get(key) or [])]
+            tests[test.get("name")] = {"summary": summary.get("status"), "messages": tmsgs}
             for res in test.get("results", []):
                 msgs = []
                 for key in ("warnings", "errors"):
@@ -210,7 +218,7 @@ def dcgm_diag(text):
                     "group": res.get("entity_group", "GPU"), "entity": res.get("entity_id"),
                     "status": res.get("status"), "info": res.get("info") or [], "messages": msgs,
                 })
-    return rows, doc.get("metadata", {})
+    return rows, tests, doc.get("metadata", {})
 
 
 def dcgm_verdict(status):
@@ -284,6 +292,19 @@ def xids(text):
     return out
 
 
+SXID = re.compile(r"SXid \((?:PCI:)?([0-9a-fA-F:.]+)\): (\d+)")
+
+
+def sxids(text):
+    """NVSwitch errors in the kernel log -> [(bus, sxid, line)]"""
+    out = []
+    for line in (text or "").splitlines():
+        m = SXID.search(line)
+        if m:
+            out.append((norm_bus(m.group(1)), int(m.group(2)), line.strip()))
+    return out
+
+
 def mokutil(text):
     t = (text or "").lower()
     if "secureboot enabled" in t:
@@ -312,11 +333,11 @@ def lspci_acs(text):
     return out, denied
 
 
-def fio_gbs(text, rw):
-    """fio --output-format=json -> bandwidth of the first job's `rw` ("read"/"write") in GB/s."""
+def fio_result(text, rw):
+    """fio --output-format=json -> (GB/s of the first job's `rw`, the job's error code)."""
     doc = json.loads(text)
-    job = doc["jobs"][0][rw]
-    return job["bw_bytes"] / 1e9
+    job = doc["jobs"][0]
+    return job[rw]["bw_bytes"] / 1e9, int(job.get("error", 0))
 
 
 def ofed_version(text):

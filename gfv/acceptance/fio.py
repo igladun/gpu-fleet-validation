@@ -27,9 +27,14 @@ def run(ctx):
                                          "--iodepth=32", "--numjobs=1", "--group_reporting",
                                          "--output-format=json"], timeout=1800)
             try:
-                gbs = round(parse.fio_gbs(r.out, rw), 3)
-            except (ValueError, KeyError, IndexError) as e:
+                gbs, job_error = parse.fio_result(r.out, rw)
+                gbs = round(gbs, 3)
+            except (ValueError, KeyError, IndexError, TypeError) as e:
                 ctx.add(f"fio.seq_{rw}", "error", path, None, st.get(key), f"{r.why()}; {e}", r.evidence)
+                continue
+            if not r.ok or job_error or gbs <= 0:
+                ctx.add(f"fio.seq_{rw}", "error", path, gbs, st.get(key),
+                        f"fio failed (rc={r.rc}, job error {job_error})", r.evidence)
                 continue
             floor = st.get(key)
             if floor is None:

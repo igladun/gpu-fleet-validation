@@ -72,9 +72,9 @@ def fabric_manager(ctx):
     state = act.out.strip() or act.why()
     ctx.add("nvlink.fabricmanager_active", "pass" if state == "active" else "fail", None, state, "active",
             evidence=act.evidence)
-    pkg = ctx.run("dpkg-fabricmanager", ["dpkg-query", "-W", "-f", "${Package} ${Version}\\n",
+    pkg = ctx.run("dpkg-fabricmanager", ["dpkg-query", "-W", "-f", "${db:Status-Abbrev} ${Package} ${Version}\\n",
                                          "nvidia-fabricmanager*"], timeout=30)
-    versions = [line.split()[1] for line in pkg.out.splitlines() if len(line.split()) == 2]
+    versions = [f[2] for f in (line.split() for line in pkg.out.splitlines()) if len(f) == 3 and f[0] == "ii"]
     if not versions:
         ctx.add("nvlink.fabricmanager_version", "error", None, None, ctx.facts.get("driver"),
                 f"no nvidia-fabricmanager package found ({pkg.why()})")

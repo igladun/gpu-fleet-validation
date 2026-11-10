@@ -40,6 +40,10 @@ def rail_map(ctx):
         return
     rmap = parse.rail_map(tp, set(ctx.facts["rails"]))
     ctx.facts["rail_map"] = rmap
+    if len(rmap) != ctx.spec["gpus"]:
+        ctx.add("rdma.rail_map", "error", None, len(rmap), ctx.spec["gpus"],
+                "topology matrix did not list every GPU", evidence="raw/nvidia-smi-topo.out")
+        return
     seen, bad = {}, 0
     for gpu, dev in sorted(rmap.items()):
         if dev is None:
@@ -73,8 +77,8 @@ def run_bandwidth(ctx):
     floor = ctx.perf("rdma_write_bw_gbps")
     for k, server in enumerate(rails):
         client = rails[(k + 1) % len(rails)]
-        bw, why = _pair(ctx, f"ib_write_bw-{server}-{client}", server, client, BASE_PORT + k, [], [])
-        _verdict(ctx, "rdma.write_bw", f"{server}<-{client}", bw, floor, why)
+        bw, why, ev = _pair(ctx, f"ib_write_bw-{server}-{client}", server, client, BASE_PORT + k, [], [])
+        _verdict(ctx, "rdma.write_bw", f"{server}<-{client}", bw, floor, why, ev)
     gpudirect(ctx, rails, floor)
 
 
@@ -90,27 +94,28 @@ def gpudirect(ctx, rails, floor):
         if server not in by_dev or client not in by_dev:
             ctx.add("rdma.gdr_write_bw", "skip", f"{server}<-{client}", None, None, "no rail-local GPU")
             continue
-        bw, why = _pair(ctx, f"ib_write_bw-gdr-{server}-{client}", server, client, BASE_PORT + 100 + k,
-                        [f"--use_cuda={by_dev[server]}"], [f"--use_cuda={by_dev[client]}"])
-        _verdict(ctx, "rdma.gdr_write_bw", f"{server}<-{client}", bw, floor, why, below="warn")
+        bw, why, ev = _pair(ctx, f"ib_write_bw-gdr-{server}-{client}", server, client, BASE_PORT + 100 + k,
+                            [f"--use_cuda={by_dev[server]}"], [f"--use_cuda={by_dev[client]}"])
+        _verdict(ctx, "rdma.gdr_write_bw", f"{server}<-{client}", bw, floor, why, ev, below="warn")
 
 
 def _pair(ctx, name, server, client, port, s_extra, c_extra):
     srv = ctx.spawn(f"{name}-server", ["ib_write_bw", "-d", server, *BW_ARGS, "-p", str(port), *s_extra])
     if srv is None:
-        return None, "ib_write_bw not found"
-    ctx.sleep()
-    cli = ctx.run(name, ["ib_write_bw", "-d", client, *BW_ARGS, "-p", str(port), *c_extra, "127.0.0.1"],
-                  timeout=90)
-    srv.finish()
+        return None, "ib_write_bw could not be started", None
+    try:
+        ctx.sleep()
+        cli = ctx.run(name, ["ib_write_bw", "-d", client, *BW_ARGS, "-p", str(port), *c_extra, "127.0.0.1"],
+                      timeout=90)
+    finally:
+        srv.finish()
     bw = parse.perftest_bw(cli.out)
-    return bw, (None if bw is not None else cli.why())
+    return bw, (None if bw is not None else cli.why()), cli.evidence
 
 
-def _verdict(ctx, check, target, bw, floor, why, below="fail"):
-    ev = None
+def _verdict(ctx, check, target, bw, floor, why, ev, below="fail"):
     if bw is None:
-        ctx.add(check, "error", target, None, floor, why or "no bandwidth row in output")
+        ctx.add(check, "error", target, None, floor, why or "no bandwidth row in output", ev)
     elif floor is None:
         ctx.add(check, "info", target, bw, None, "Gb/s; no floor in manifest", ev)
     else:

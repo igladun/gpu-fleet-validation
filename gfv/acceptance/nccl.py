@@ -1,6 +1,7 @@
 """Single-node NCCL all_reduce over NVLink/NVSwitch: bus bandwidth, correctness and NCCL version."""
 
 import glob
+import json
 import os
 
 from . import parse
@@ -14,11 +15,24 @@ def find_all_reduce(ctx):
     return ctx.which("all_reduce_perf")
 
 
-def find_installed(tools_dir):
-    """Newest nccl-tests build under the tools dir (used with --no-install)."""
-    builds = sorted(glob.glob(os.path.join(tools_dir, "nccl-tests-*", "build", "all_reduce_perf")),
-                    key=os.path.getmtime)
-    return os.path.dirname(os.path.dirname(builds[-1])) if builds else None
+MAX_BYTES = 8 * 1024 ** 3
+
+
+def find_installed(tools_dir, nccl_want, cuda):
+    """--no-install: a previous build for the manifest's NCCL and the driver's CUDA major, if any."""
+    major = (cuda or "").split(".")[0]
+    for meta_path in sorted(glob.glob(os.path.join(tools_dir, "nccl-tests-*", "gfv-tool.json")), reverse=True):
+        try:
+            with open(meta_path) as f:
+                meta = json.load(f)
+        except (OSError, ValueError):
+            continue
+        v = meta.get("nccl_apt_version", "")
+        if (nccl_want and not v.startswith(nccl_want + "-")) or f"+cuda{major}." not in v:
+            continue
+        if os.access(os.path.join(meta.get("dir", ""), "build", "all_reduce_perf"), os.X_OK):
+            return meta
+    return None
 
 
 def run(ctx):
@@ -44,15 +58,19 @@ def run(ctx):
         f"wrong values at sizes {wrong[:5]}" if wrong else ("rc=%d" % r.rc if not r.ok else "out-of-bounds line missing"))
     ctx.add("nccl.correctness", "pass" if ok else "fail", None, "0 wrong" if ok else "errors", "0 wrong", detail,
             r.evidence)
+    want = ctx.spec.get("nccl")
+    if want:
+        ctx.add("nccl.version", "pass" if log["nccl_version"] == want else "fail", None, log["nccl_version"], want,
+                evidence=r.evidence)
     top = max(log["rows"], key=lambda row: row["size"])
     floor = ctx.perf("nccl_allreduce_busbw_gbs_1node")
     target = f"{top['size']} B"
+    if top["size"] != MAX_BYTES:
+        ctx.add("nccl.allreduce_busbw", "error", target, top["busbw"], floor,
+                f"log ends before {MAX_BYTES} B (truncated run?)", r.evidence)
+        return
     if floor is None:
         ctx.add("nccl.allreduce_busbw", "info", target, top["busbw"], None, "GB/s; no floor in manifest", r.evidence)
     else:
         ctx.add("nccl.allreduce_busbw", "pass" if (top["busbw"] or 0) >= floor else "fail", target, top["busbw"],
                 floor, "GB/s out-of-place bus bandwidth at the largest size", r.evidence)
-    want = ctx.spec.get("nccl")
-    if want:
-        ctx.add("nccl.version", "pass" if log["nccl_version"] == want else "fail", None, log["nccl_version"], want,
-                evidence=r.evidence)

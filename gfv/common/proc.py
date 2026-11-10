@@ -45,21 +45,36 @@ class Proc:
         self._seen[name] = n + 1
         return name if n == 0 else f"{name}.{n}"
 
-    def run(self, name, cmd, timeout=120, env_extra=None, cwd=None):
+    def run(self, name, cmd, timeout=120, env_extra=None, cwd=None, to_file=False):
+        """Run cmd. to_file=True sends output straight to the evidence file instead of a pipe, for
+        programs that daemonize and keep their stdout open (a pipe read would never finish)."""
         name = self._name(name)
         env = dict(self.env, **(env_extra or {}))
         start = time.monotonic()
         missing = timed_out = False
+        out_path = os.path.join(self.raw, f"{name}.out")
         try:
-            p = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                               errors="replace", timeout=timeout, env=env, cwd=cwd)
-            rc, out, err = p.returncode, p.stdout, p.stderr
+            if to_file:
+                with open(out_path, "w") as fh:
+                    p = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=fh, stderr=subprocess.STDOUT,
+                                       timeout=timeout, env=env, cwd=cwd, start_new_session=True)
+                with open(out_path, errors="replace") as fh:
+                    rc, out, err = p.returncode, fh.read(), ""
+            else:
+                p = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                   errors="replace", timeout=timeout, env=env, cwd=cwd)
+                rc, out, err = p.returncode, p.stdout, p.stderr
         except FileNotFoundError as e:
             rc, out, err, missing = 127, "", str(e), True
         except subprocess.TimeoutExpired as e:
             rc, timed_out = 124, True
             out = _text(e.stdout)
+            if to_file:
+                with open(out_path, errors="replace") as fh:
+                    out = fh.read()
             err = _text(e.stderr) + f"\n[gfv] timed out after {timeout} s"
+        except OSError as e:          # not executable, permission denied, ...
+            rc, out, err = 126, "", f"{type(e).__name__}: {e}"
         secs = time.monotonic() - start
         self._save(name, cmd, rc, out, err, secs)
         return CmdResult(name, cmd, rc, out, err, secs, missing, timed_out)
@@ -71,7 +86,7 @@ class Proc:
         out = open(os.path.join(self.raw, f"{name}.out"), "w")
         try:
             p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, env=env)
-        except FileNotFoundError:
+        except OSError:
             out.close()
             return None
         return _Background(self, name, cmd, p, out)

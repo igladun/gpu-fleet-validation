@@ -27,6 +27,12 @@ def run(ctx):
         ctx.add("inventory.mig", "fail", f"GPU{g['index']}", "Enabled", "Disabled", "MIG splits the GPU")
     if gpus and not mig:
         ctx.add("inventory.mig", "pass", None, "Disabled", "Disabled")
+    no_ecc = [g for g in gpus if g["ecc.mode.current"].lower() != "enabled"]
+    for g in no_ecc:
+        ctx.add("inventory.ecc_mode", "fail", f"GPU{g['index']}", g["ecc.mode.current"], "Enabled",
+                "ECC off: memory errors go unreported")
+    if gpus and not no_ecc:
+        ctx.add("inventory.ecc_mode", "pass", None, "Enabled", "Enabled")
     off = [g for g in gpus if g["persistence_mode"].lower() == "disabled"]
     for g in off:
         ctx.add("inventory.persistence_mode", "warn", f"GPU{g['index']}", "Disabled", "Enabled")
@@ -94,11 +100,16 @@ def host(ctx):
         ctx.add("inventory.power_profile", "skip", None, None, h["power_profile"], LATER_TIER)
 
 
-def upstream_bridges(sysfs, bus):
-    """PCI bridges between the root complex and a device, from its sysfs path."""
-    real = sysfs.realpath(f"/sys/bus/pci/devices/{bus}")
-    parts = [p for p in real.split("/") if BDF.match(p)]
-    return [p.lower() for p in parts if p.lower() != bus]
+def switch_ports(sysfs, devpath, bdf=None):
+    """PCIe switch ports between the root port and a device, from its sysfs path; None if unresolvable.
+    The root port (first BDF under the host bridge) is excluded: same-switch P2P never reaches it."""
+    if not sysfs.exists(devpath):
+        return None
+    real = sysfs.realpath(devpath)
+    parts = [p.lower() for p in real.split("/") if BDF.match(p)]
+    if not parts or (bdf and parts[-1] != bdf):
+        return None
+    return parts[1:-1]
 
 
 def acs(ctx, want):
@@ -107,28 +118,38 @@ def acs(ctx, want):
         ctx.add("inventory.pcie_acs", "error", None, None, want, out.why())
         return
     flags, denied = parse.lspci_acs(out.out)
-    bad, checked, hidden = [], 0, []
-    for g in ctx.facts["gpus"]:
-        for br in upstream_bridges(ctx.sys, g["bus"]):
+    devices = [(f"GPU{g['index']}", f"/sys/bus/pci/devices/{g['bus']}", g["bus"]) for g in ctx.facts["gpus"]]
+    devices += [(dev, f"/sys/class/infiniband/{dev}/device", None) for dev in ctx.facts["rails"]]
+    bad, checked, hidden, unresolved = [], set(), set(), []
+    for name, path, bdf in devices:
+        ports = switch_ports(ctx.sys, path, bdf)
+        if ports is None:
+            unresolved.append(name)
+            continue
+        for br in ports:
             if br in denied:
-                hidden.append(br)
+                hidden.add(br)
             if br not in flags:
                 continue
-            checked += 1
+            checked.add(br)
             redirect = flags[br].get("ReqRedir") or flags[br].get("CmpltRedir")
             if (want == "disabled") == bool(redirect):
-                bad.append((g["index"], br, redirect))
+                bad.append((name, br, redirect))
+    ev = "raw/lspci-vvv.out"
     if hidden:
-        ctx.add("inventory.pcie_acs", "error", None, None, want,
-                "lspci hides capabilities (not root?)", evidence="raw/lspci-vvv.out")
+        ctx.add("inventory.pcie_acs", "error", None, None, want, "lspci hides capabilities (not root?)", ev)
         return
-    for idx, br, redirect in bad:
-        ctx.add("inventory.pcie_acs", "fail", f"GPU{idx} via {br}", "enabled" if redirect else "disabled",
-                want, "ReqRedir/CmpltRedir set: P2P traffic detours through the root complex",
-                evidence="raw/lspci-vvv.out")
-    if not bad:
+    if unresolved:
+        ctx.add("inventory.pcie_acs", "error", None, unresolved, want, "no sysfs PCI path for these devices", ev)
+    for name, br, redirect in bad:
+        ctx.add("inventory.pcie_acs", "fail", f"{name} via {br}", "enabled" if redirect else "disabled", want,
+                "ReqRedir/CmpltRedir set: P2P and GPUDirect traffic detours through the root complex", ev)
+    if not checked:
+        ctx.add("inventory.pcie_acs", "error", None, None, want,
+                "no ACS control found on any PCIe switch port above the GPUs and NICs", ev)
+    elif not bad and not unresolved:
         ctx.add("inventory.pcie_acs", "pass", None, want, want,
-                f"{checked} upstream bridge ACS controls checked", evidence="raw/lspci-vvv.out")
+                f"{len(checked)} switch ports above {len(devices)} GPUs/NICs checked", ev)
 
 
 def firmware(ctx):

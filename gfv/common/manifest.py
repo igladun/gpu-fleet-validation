@@ -75,8 +75,10 @@ def load(path=None, cls=None):
                 doc = _parse(f.read(), path)
         except OSError as e:
             raise ManifestError(f"cannot read manifest {path}: {e}") from e
-        classes = doc.get("class", {})
+        classes = doc.get("class", {}) if isinstance(doc, dict) else None
         source = path
+        if not isinstance(classes, dict):
+            raise ManifestError(f"{path}: expected a [class.\"<name>\"] table")
         if not classes:
             raise ManifestError(f"{path}: no [class.\"<name>\"] table")
         if cls is None:
@@ -98,7 +100,28 @@ def load(path=None, cls=None):
     return cls, spec, source, doc
 
 
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _str_list(v):
+    return isinstance(v, list) and all(isinstance(x, str) for x in v)
+
+
+# Keys of the tables L2 reads. A typo must not silently turn a check off.
+PERF = {"nccl_allreduce_busbw_gbs_1node", "rdma_write_bw_gbps", "dcgm_pcie_bidir_gbs"}
+HOST = {"kernel_cmdline_contains": _str_list, "pcie_acs": lambda v: v in ("disabled", "enabled"),
+        "secure_boot": lambda v: isinstance(v, bool), "nvidia_peermem": lambda v: isinstance(v, bool),
+        "power_profile": lambda v: isinstance(v, str)}
+FIRMWARE = {"bios", "bmc", "nic", "gpu_vbios"}
+STORAGE = {"path": lambda v: isinstance(v, str) and v.startswith("/"),
+           "size_gib": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 0,
+           "seq_write_gbs": _num, "seq_read_gbs": _num}
+
+
 def validate(cls, spec):
+    if not isinstance(spec, dict):
+        raise ManifestError(f"class {cls!r} must be a table")
     problems = []
     for key, typ in REQUIRED.items():
         if key not in spec:
@@ -108,17 +131,39 @@ def validate(cls, spec):
     for key, typ in OPTIONAL.items():
         if key in spec and not isinstance(spec[key], typ):
             problems.append(f"{key} must be {typ.__name__}")
+    unknown = sorted(set(spec) - set(REQUIRED) - set(OPTIONAL) - set(TABLES))
+    if unknown:
+        problems.append(f"unknown keys {unknown}")
     for t in TABLES:
         if t in spec and not isinstance(spec[t], dict):
             problems.append(f"[{t}] must be a table")
-    for k, v in spec.get("perf", {}).items():
-        if not isinstance(v, (int, float)) or isinstance(v, bool):
+
+    def table(name):
+        return spec.get(name) if isinstance(spec.get(name), dict) else {}
+
+    for k, v in table("perf").items():
+        if k not in PERF:
+            problems.append(f"unknown perf.{k} (known: {', '.join(sorted(PERF))})")
+        elif not _num(v):
             problems.append(f"perf.{k} must be a number")
-    for k, v in spec.get("firmware", {}).items():
-        if not isinstance(v, list):
-            problems.append(f"firmware.{k} must be a list")
-    storage = spec.get("storage")
-    if storage is not None and "path" not in storage:
-        problems.append("storage.path is required when [storage] is present")
+    for k, v in table("host").items():
+        if k not in HOST:
+            problems.append(f"unknown host.{k}")
+        elif not HOST[k](v):
+            problems.append(f"host.{k} has an invalid value {v!r}")
+    for k, v in table("firmware").items():
+        if k not in FIRMWARE:
+            problems.append(f"unknown firmware.{k}")
+        elif not _str_list(v):
+            problems.append(f"firmware.{k} must be a list of strings")
+    storage = table("storage") if "storage" in spec else None
+    if storage is not None:
+        if "path" not in storage:
+            problems.append("storage.path is required when [storage] is present")
+        for k, v in storage.items():
+            if k not in STORAGE:
+                problems.append(f"unknown storage.{k}")
+            elif not STORAGE[k](v):
+                problems.append(f"storage.{k} has an invalid value {v!r}")
     if problems:
         raise ManifestError(f"class {cls!r}: " + "; ".join(problems))

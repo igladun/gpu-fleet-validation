@@ -19,7 +19,7 @@ class SysFS:
             return default
 
     def exists(self, p):
-        return os.path.exists(self.path(p))
+        return os.path.exists(self.path(p))       # follows symlinks: a dangling link does not exist
 
     def listdir(self, p):
         try:

@@ -2,6 +2,10 @@
 
 import json
 import os
+import signal
+import subprocess
+import sys
+import time
 import unittest
 
 from helpers import MANIFEST_JSON, FakeNode
@@ -193,7 +197,8 @@ class TestFaults(AcceptCase):
         self.node.edit("lspci-vvv.txt", "ACSCtl:\tSrcValid- TransBlk- ReqRedir- CmpltRedir-",
                        "ACSCtl:\tSrcValid+ TransBlk- ReqRedir+ CmpltRedir+")
         r = self.go()
-        self.assertEqual(r.failing(), [("inventory.pcie_acs", "GPU0 via 0000:08:00.0")])
+        self.assertEqual(r.failing(), [("inventory.pcie_acs", "GPU0 via 0000:08:00.0"),
+                                       ("inventory.pcie_acs", "mlx5_ib0 via 0000:08:00.0")])
 
     def test_secure_boot_off(self):
         self.node.write("mokutil.txt", "SecureBoot disabled\n")
@@ -239,11 +244,208 @@ class TestFaults(AcceptCase):
         self.assertFalse(any(c[0] in ("dcgmi", "all_reduce_perf") and c[1:2] != ["--version"]
                              and c[1:2] != ["discovery"] for c in self.node.calls()))
 
-    def test_only_stages(self):
-        r = self.go("--only", "inventory,nvlink")
+    def test_only_stages_with_allow_partial(self):
+        r = self.go("--only", "inventory,nvlink", "--allow-partial")
         self.assertEqual(r.rc, 0, r.failing())
-        stages = {x["check"].split(".")[0] for x in r.results}
-        self.assertEqual(stages, {"prereq", "inventory", "nvlink"})
+        ran = {x["check"].split(".")[0] for x in r.results if not x["check"].endswith(".not_selected")}
+        self.assertEqual(ran, {"run", "prereq", "inventory", "nvlink"})
+        self.assertEqual(r.verdicts("run.partial"), ["warn"])
+        self.assertEqual({x["check"] for x in r.by("health.not_selected")}, {"health.not_selected"})
+
+    def test_partial_run_fails_by_default(self):
+        r = self.go("--only", "fio")
+        self.assertEqual(r.rc, 1)
+        self.assertEqual(r.failing(), [("run.partial", None)])
+        with open(os.path.join(self.node.out, "SUMMARY.md")) as f:
+            self.assertIn("**Verdict: FAIL**", f.read())
+
+    def test_no_stages_left(self):
+        r = self.go("--only", "install")          # --no-install removes it: nothing would run
+        self.assertEqual(r.rc, 2)
+
+    def test_evidence_dir_must_be_empty(self):
+        os.makedirs(self.node.out)
+        open(os.path.join(self.node.out, "old.txt"), "w").close()
+        r = self.go()
+        self.assertEqual(r.rc, 2)
+        self.assertIn("not empty", r.stderr)
+
+    def test_test_overrides_are_recorded(self):
+        r = self.go()
+        self.assertEqual(r.verdicts("run.test_overrides"), ["warn"])
+
+    # --- review regressions: missing or odd data must never pass -------------------------
+    def dcgm_doc(self):
+        return json.loads(self.node.text("dcgm-diag-r3.json"))
+
+    def dcgm_tests(self, doc):
+        return {t["name"]: t for c in doc["DCGM Diagnostic"]["test_categories"] for t in c["tests"]}
+
+    def test_dcgm_nonzero_exit_with_all_pass_json(self):
+        self.node.write("dcgm-rc-fail", "")
+        r = self.go()
+        self.assertEqual(r.failing(), [("dcgm.diag", None)])
+
+    def test_dcgm_required_test_skipped(self):
+        doc = self.dcgm_doc()
+        for res in self.dcgm_tests(doc)["memory"]["results"]:
+            res["status"] = "Skip"
+        self.node.write("dcgm-diag-r3.json", json.dumps(doc))
+        r = self.go()
+        self.assertEqual(r.rc, 1)
+        self.assertEqual({t for c, t in r.failing()}, {f"memory/GPU{i}" for i in range(8)})
+
+    def test_dcgm_gpu_missing_from_results(self):
+        doc = self.dcgm_doc()
+        for t in self.dcgm_tests(doc).values():
+            t["results"] = [x for x in t["results"] if x.get("entity_id") != 7]
+        self.node.write("dcgm-diag-r3.json", json.dumps(doc))
+        r = self.go()
+        self.assertEqual(r.rc, 1)
+        self.assertIn(("dcgm.diag", "memory"), r.failing())
+
+    def test_dcgm_test_summary_fail_without_results(self):
+        doc = self.dcgm_doc()
+        t = self.dcgm_tests(doc)["diagnostic"]
+        t["results"] = []
+        t["test_summary"] = {"status": "Fail", "errors": [{"message": "plugin crashed"}]}
+        self.node.write("dcgm-diag-r3.json", json.dumps(doc))
+        r = self.go()
+        self.assertEqual(r.failing(), [("dcgm.diag", "diagnostic")])
+        self.assertIn("plugin crashed", r.by("dcgm.diag", "fail")[0]["detail"])
+
+    def test_dcgm_required_test_missing(self):
+        doc = self.dcgm_doc()
+        for c in doc["DCGM Diagnostic"]["test_categories"]:
+            c["tests"] = [t for t in c["tests"] if t["name"] != "targeted_power"]
+        self.node.write("dcgm-diag-r3.json", json.dumps(doc))
+        r = self.go()
+        self.assertEqual(r.failing(), [("dcgm.diag", "targeted_power")])
+
+    def test_acs_unresolvable_gpu_path_is_error(self):
+        del self.node.spec["symlinks"]["/sys/bus/pci/devices/0000:0a:00.0"]
+        self.node.edit("lspci-vvv.txt", "0000:09:00.0 PCI bridge", "0000:09:00.0 PCI bridge")
+        r = self.go()
+        self.assertIn(("inventory.pcie_acs", None), r.failing())
+
+    def test_saturated_soft_counter_is_warning(self):
+        self.node.sysfs("/sys/class/infiniband/mlx5_ib2/ports/1/counters/port_xmit_discards", "65535")
+        r = self.go()
+        self.assertEqual(r.rc, 0, r.failing())
+        self.assertIn("warn", r.verdicts("health.ib_counter"))
+
+    def test_compute_apps_query_failure_cannot_run(self):
+        os.remove(self.node.path("compute-apps.csv"))
+        r = self.go()
+        self.assertEqual(r.rc, 2)
+        self.assertEqual(r.failing(), [("prereq.gpus_idle", None)])
+
+    def test_ecc_disabled(self):
+        lines = [line.replace(", 0, 0, 9.0, Enabled", ", [N/A], [N/A], 9.0, Disabled")
+                 for line in self.node.text("gpus.csv").splitlines(keepends=True)]
+        self.node.write("gpus.csv", "".join(lines))
+        r = self.go()
+        self.assertEqual(r.rc, 1)
+        failing = r.failing()
+        self.assertIn(("inventory.ecc_mode", "GPU0"), failing)
+        self.assertIn(("health.ecc_uncorrected", "GPU0"), failing)
+        self.assertIn(("health.ecc_delta", "GPU0"), failing)
+
+    def test_gpu_query_broken_after_load(self):
+        self.node.write("gpus-after.csv", "Unable to determine the device handle for GPU0000:3B:00.0: Unknown Error\n")
+        r = self.go()
+        self.assertEqual(r.rc, 1)
+        self.assertIn(("health.ecc_delta", None), r.failing())
+
+    def test_acs_nothing_checkable(self):
+        for link in [k for k in self.node.spec["symlinks"] if "/bus/pci/devices/" in k or k.endswith("/device")]:
+            del self.node.spec["symlinks"][link]
+        r = self.go()
+        self.assertIn(("inventory.pcie_acs", None), r.failing())
+        self.assertEqual(r.verdicts("inventory.pcie_acs"), ["error"])
+
+    def test_nvlink_counters_unreadable(self):
+        self.node.write("nvlink-e.txt", "Failed to get NVLink error counters: Unknown Error\n")
+        self.node.write("nvlink-e-after.txt", "Failed to get NVLink error counters: Unknown Error\n")
+        r = self.go()
+        self.assertIn(("health.nvlink_counters_readable", None), r.failing())
+        self.assertIn(("health.nvlink_error_delta", None), r.failing())
+
+    def test_ib_counters_missing(self):
+        for k in [k for k in self.node.spec["files"] if k.startswith("/sys/class/infiniband/mlx5_ib4/ports/1/counters/")]:
+            del self.node.spec["files"][k]
+        r = self.go()
+        self.assertIn(("health.ib_counters_readable", "mlx5_ib4"), r.failing())
+
+    def test_ib_counter_saturated(self):
+        self.node.sysfs("/sys/class/infiniband/mlx5_ib2/ports/1/counters/symbol_error", "65535")
+        r = self.go()
+        self.assertEqual(r.failing(), [("health.ib_counter", "mlx5_ib2/1")])
+
+    def test_topology_unparseable(self):
+        self.node.write("topo.txt", self.node.text("topo.txt").replace("\t", "  "))
+        r = self.go()
+        self.assertIn(("rdma.rail_map", None), r.failing())
+
+    def test_unclassified_xid_fails(self):
+        line = "[Tue Nov 10 10:00:00 2026] NVRM: Xid (PCI:0000:3b:00): 154, GPU recovery action changed (Node Reboot Required)\n"
+        self.node.write("dmesg-before.txt", self.node.text("dmesg-before.txt") + line)
+        r = self.go()
+        self.assertEqual(r.failing(), [("health.xid", "0000:3b:00.0")])
+
+    def test_sxid_during_load_fails(self):
+        line = "[Tue Nov 10 10:00:00 2026] nvidia-nvswitch1: SXid (PCI:0000:10:00.0): 20034, Fatal, Link 12 LTSSM Fault Up\n"
+        self.node.write("dmesg-after.txt", self.node.text("dmesg-after.txt") + line)
+        r = self.go()
+        self.assertEqual(r.failing(), [("health.sxid_new", "0000:10:00.0")])
+
+    def test_nccl_truncated_log(self):
+        lines = [x for x in self.node.text("all_reduce_perf.log").splitlines(keepends=True)
+                 if not x.lstrip().startswith(("4294967296", "8589934592"))]
+        self.node.write("all_reduce_perf.log", "".join(lines))
+        r = self.go()
+        self.assertEqual(r.failing(), [("nccl.allreduce_busbw", "2147483648 B")])
+
+
+class TestSignals(AcceptCase):
+    """SIGTERM unwinds and records an interrupted run (exit 2); an inherited SIGHUP ignore (nohup) is kept."""
+
+    def start(self, ignore_hup):
+        self.node.build()
+        m = os.path.join(self.node.tmp, "m.json")
+        with open(MANIFEST_JSON) as f:
+            doc = json.load(f)
+        doc["class"]["hgx-h100-8x"]["perf"]["dcgm_pcie_bidir_gbs"] = 70
+        with open(m, "w") as f:
+            json.dump(doc, f)
+        cmd = [sys.executable, "-m", "gfv", "accept", "--manifest", m, "--node", "gpu-node-01", "--out", self.node.out,
+               "--tools-dir", self.node.tools_dir, "--no-install"]
+        pre = (lambda: signal.signal(signal.SIGHUP, signal.SIG_IGN)) if ignore_hup else None
+        p = subprocess.Popen(cmd, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             env=self.node.env(GFV_SETTLE_SECONDS="0.5"), stdout=subprocess.DEVNULL,
+                             stderr=subprocess.PIPE, text=True, preexec_fn=pre)
+        deadline = time.time() + 30
+        while time.time() < deadline and not os.path.exists(os.path.join(self.node.out, "raw", "commands.log")):
+            time.sleep(0.05)
+        time.sleep(1.0)                       # inside the RDMA ring (8 pairs x 0.5 s settle)
+        return p
+
+    def results(self):
+        with open(os.path.join(self.node.out, "results.jsonl")) as f:
+            return [json.loads(line) for line in f]
+
+    def test_sigterm_records_interrupted_run(self):
+        p = self.start(ignore_hup=False)
+        p.send_signal(signal.SIGTERM)
+        p.communicate(timeout=60)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn(("run", "error"), {(r["check"], r["verdict"]) for r in self.results()})
+
+    def test_nohup_keeps_running(self):
+        p = self.start(ignore_hup=True)
+        p.send_signal(signal.SIGHUP)
+        p.communicate(timeout=60)
+        self.assertEqual(p.returncode, 0)
 
 
 class TestMissingTools(AcceptCase):
@@ -258,6 +460,26 @@ class TestMissingTools(AcceptCase):
 
 
 class TestCannotRun(AcceptCase):
+    def test_nvidia_smi_not_executable(self):
+        self.node.build()
+        b = os.path.join(self.node.tmp, "noexec")
+        os.makedirs(b)
+        with open(os.path.join(b, "nvidia-smi"), "w") as f:
+            f.write("#!/bin/sh\n")
+        env = self.node.env(PATH=b)
+        r = self.node.accept("--no-install", env=env)
+        self.assertEqual(r.rc, 2)
+        self.assertEqual(r.failing(), [("prereq.nvidia_smi", None)])
+        with open(os.path.join(self.node.out, "SUMMARY.md")) as f:
+            self.assertIn("**Verdict: FAIL**", f.read())
+
+    def test_malformed_manifest_shape(self):
+        bad = os.path.join(self.node.tmp, "shape.json")
+        with open(bad, "w") as f:
+            json.dump({"class": {"x": []}}, f)
+        r = self.node.accept(manifest=bad)
+        self.assertEqual(r.rc, 2)
+
     def test_no_driver(self):
         self.node.build()
         env = self.node.env(PATH=os.path.join(self.node.tmp, "empty"))
@@ -290,6 +512,24 @@ class TestCannotRun(AcceptCase):
 
 
 class TestStorage(AcceptCase):
+    def test_fio_job_error(self):
+        doc = json.loads(self.node.text("fio-write.json"))
+        doc["jobs"][0]["error"] = 5
+        doc["jobs"][0]["write"]["bw_bytes"] = 0
+        self.node.write("fio-write.json", json.dumps(doc))
+        with open(MANIFEST_JSON) as f:
+            m = json.load(f)
+        scratch = os.path.join(self.node.tmp, "scratch")
+        os.makedirs(scratch)
+        spec = m["class"]["hgx-h100-8x"]
+        spec["perf"]["dcgm_pcie_bidir_gbs"] = 70
+        spec["storage"] = {"path": scratch, "size_gib": 1}
+        path = os.path.join(self.node.tmp, "m.json")
+        with open(path, "w") as f:
+            json.dump(m, f)
+        r = self.run_accept(manifest=path)
+        self.assertEqual(r.failing(), [("fio.seq_write", scratch)])
+
     def test_fio_with_storage_table(self):
         with open(MANIFEST_JSON) as f:
             doc = json.load(f)

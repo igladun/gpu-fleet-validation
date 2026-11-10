@@ -3,6 +3,7 @@
 import json
 import os
 import secrets
+import signal
 import socket
 import sys
 import traceback
@@ -36,6 +37,8 @@ def add_arguments(p):
     p.add_argument("--leaf", help="leaf-switch label for results")
     p.add_argument("--force", action="store_true", help="run even if GPU processes are running")
     p.add_argument("--fail-fast", action="store_true", help="skip the heavy stages once a cheap check failed")
+    p.add_argument("--allow-partial", action="store_true",
+                   help="with --only/--skip: let a partial run pass (it fails by default; e.g. pre-staging tools)")
     p.add_argument("--dry-run", action="store_true", help="validate the manifest and print the plan; run nothing")
 
 
@@ -50,20 +53,43 @@ def stages_from(args):
     return [s for s in STAGES if (not only or s in only) and s not in skip]
 
 
+class Terminated(BaseException):
+    """SIGTERM/SIGHUP: unwind through every finally (stop servers, the host engine, remove fio data)."""
+
+
+def _on_signal(signum, _frame):
+    for sig in (signal.SIGTERM, signal.SIGHUP):      # a second signal must not abort the cleanup
+        signal.signal(sig, signal.SIG_IGN)
+    raise Terminated(signal.Signals(signum).name)
+
+
+TEST_OVERRIDES = ("GFV_SYSROOT", "GFV_ALLOW_NONROOT", "GFV_SETTLE_SECONDS")
+
+
 def accept(args):
     try:
         stages = stages_from(args)
         cls, spec, source, _ = manifest.load(args.manifest, args.cls)
-    except (ValueError, manifest.ManifestError) as e:
+    except Exception as e:  # noqa: BLE001 - any bad manifest or argument means the gate cannot run
         print(f"gfv: {e}", file=sys.stderr)
         return EXIT_CANNOT_RUN
     if args.no_install:
         stages = [s for s in stages if s != "install"]
+    if not stages:
+        print("gfv: no stages selected", file=sys.stderr)
+        return EXIT_CANNOT_RUN
+    missing = [s for s in STAGES if s not in stages and not (s == "install" and args.no_install)]
     if args.dry_run:
         print_plan(cls, spec, source, stages, args)
+        if missing:
+            print(f"partial run: {','.join(missing)} not selected" +
+                  ("" if args.allow_partial else " (exit 1 unless --allow-partial)"))
         return EXIT_PASS
     if os.geteuid() != 0 and not os.environ.get("GFV_ALLOW_NONROOT"):
         print("gfv: run as root (DCGM diagnostics, kernel log, PCI config space, tool install)", file=sys.stderr)
+        return EXIT_CANNOT_RUN
+    if args.out and os.path.isdir(args.out) and os.listdir(args.out):
+        print(f"gfv: evidence directory {args.out} is not empty", file=sys.stderr)
         return EXIT_CANNOT_RUN
 
     run_id = f"l2-{utcnow().replace('-', '').replace(':', '')}-{secrets.token_hex(2)}"
@@ -80,15 +106,43 @@ def accept(args):
               settle=float(os.environ.get("GFV_SETTLE_SECONDS", "1.5")))
     print(f"gfv L2 acceptance {run_id}: node {args.node}, class {cls} ({source}), stages {','.join(stages)}",
           file=sys.stderr)
+    handled = [sig for sig in (signal.SIGTERM, signal.SIGHUP)
+               if signal.getsignal(sig) is not signal.SIG_IGN]      # nohup: keep ignoring SIGHUP
+    for sig in handled:
+        signal.signal(sig, _on_signal)
+    rec.add("run.stages", "info", None, stages, list(STAGES))
+    overrides = sorted(k for k in TEST_OVERRIDES if k in os.environ)
+    if overrides:
+        rec.add("run.test_overrides", "warn", None, overrides, None,
+                "test-only environment overrides are set; results may not describe this host")
+    for s in missing:
+        rec.add(f"{s}.not_selected", "skip", None, None, None, "stage not selected")
+    if missing:
+        rec.add("run.partial", "warn" if args.allow_partial else "error", None, missing, [],
+                "partial run: these stages did not run" + ("" if args.allow_partial else
+                                                            " (pass --allow-partial to accept a partial run)"))
     code = EXIT_FAIL
     try:
         code = run_stages(ctx, stages)
-    except KeyboardInterrupt:
-        rec.add("run", "error", None, None, None, "interrupted")
-        code = EXIT_FAIL
+    except (KeyboardInterrupt, Terminated) as e:
+        rec.add("run", "error", None, None, None, f"interrupted ({type(e).__name__} {e}); the gate did not finish")
+        code = EXIT_CANNOT_RUN
+    except Exception as e:  # noqa: BLE001 - a crash outside a stage still leaves a FAIL record
+        path = os.path.join(out_dir, "crash-run.txt")
+        with open(path, "w") as f:
+            f.write(traceback.format_exc())
+        rec.add("run.crash", "error", None, None, None, f"{type(e).__name__}: {e}", os.path.basename(path))
+        prereq_ok = any(r["check"] == "prereq.gpus_idle" and r["verdict"] in ("pass", "warn") for r in rec.results)
+        code = EXIT_FAIL if prereq_ok else EXIT_CANNOT_RUN
     finally:
+        for sig in handled:
+            signal.signal(sig, signal.SIG_DFL)
+        if code == EXIT_PASS and rec.overall() != "pass":
+            code = EXIT_FAIL
         rec.finish({"notes": ctx.notes, "finished": utcnow()})
         verdict = "PASS" if code == EXIT_PASS else ("CANNOT RUN" if code == EXIT_CANNOT_RUN else "FAIL")
+        if missing and code == EXIT_PASS:
+            verdict = f"PASS (partial: {','.join(missing)} not run)"
         print(f"gfv: {verdict} - evidence in {out_dir} (SUMMARY.md, results.jsonl, junit.xml)", file=sys.stderr)
     return code
 
@@ -104,6 +158,10 @@ def run_stages(ctx, stages):
     rec.add("prereq.nvidia_smi", "pass", None, ctx.facts.get("driver"), None, f"{len(ctx.facts['gpus'])} GPUs")
     apps = ctx.run("nvidia-smi-compute-apps", ["nvidia-smi", "--query-compute-apps=" + ",".join(parse.APP_FIELDS),
                                                "--format=csv,noheader"], timeout=60)
+    if not apps.ok:
+        rec.add("prereq.gpus_idle", "error", None, None, 0, f"cannot list GPU processes ({apps.why()})",
+                apps.evidence)
+        return EXIT_CANNOT_RUN
     busy = parse.compute_apps(apps.out)
     if busy:
         names = sorted({a.get("process_name", "?") for a in busy})
@@ -120,9 +178,9 @@ def run_stages(ctx, stages):
         _guard(ctx, "install", lambda: install.run(ctx, args.tools_dir,
                                                    nccl_needed="nccl" in stages or stages == ["install"]))
     else:
-        existing = nccl.find_installed(args.tools_dir)
-        if existing:
-            install.load_existing(ctx, existing)
+        meta = nccl.find_installed(args.tools_dir, ctx.spec.get("nccl"), ctx.facts.get("cuda"))
+        if meta:
+            install.use_tools(ctx, meta)
 
     if "health" in stages:
         _guard(ctx, "health", lambda: health.before(ctx))

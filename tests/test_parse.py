@@ -80,7 +80,8 @@ class TestParse(unittest.TestCase):
         self.assertEqual(parse.dcgmi_version(read("dcgmi-version.txt")), "4.6.1")
 
     def test_dcgm_diag(self):
-        rows, meta = parse.dcgm_diag(read("dcgm-diag-r3.json"))
+        rows, tests, meta = parse.dcgm_diag(read("dcgm-diag-r3.json"))
+        self.assertEqual({t["summary"] for t in tests.values()}, {"Pass"})
         self.assertEqual(meta["version"], "4.6.1")
         tests = {r["test"] for r in rows}
         self.assertTrue({"memory", "diagnostic", "pcie", "nvbandwidth", "targeted_stress"} <= tests)
@@ -89,6 +90,12 @@ class TestParse(unittest.TestCase):
         self.assertEqual(bidir[0], 76.08)
         self.assertEqual(bidir[1], 76.04)
         self.assertTrue(all(v > 100 for k, v in bidir.items() if k >= 2))
+
+    def test_dcgm_unnamed_test(self):
+        doc = {"DCGM Diagnostic": {"test_categories": [{"category": "Hardware", "tests": [
+            {"results": [{"entity_group": "GPU", "entity_id": 0, "status": "Pass"}]}]}]}}
+        rows, tests, _ = parse.dcgm_diag(json.dumps(doc))
+        self.assertEqual(rows[0]["test"], "unnamed-Hardware-0")
 
     def test_dcgm_verdict(self):
         self.assertEqual(parse.dcgm_verdict("Fail"), "fail")
@@ -120,6 +127,11 @@ class TestParse(unittest.TestCase):
         line = "[Tue Nov 10 10:00:00 2026] NVRM: Xid (PCI:0000:3b:00): 79, pid=1234, name=python3, GPU has fallen off the bus."
         self.assertEqual(parse.xids(line), [("0000:3b:00.0", 79, line)])
 
+    def test_sxids(self):
+        line = "[Tue Nov 10 10:00:00 2026] nvidia-nvswitch2: SXid (PCI:0000:11:00.0): 12028, Non-fatal, Link 32"
+        self.assertEqual(parse.sxids(line), [("0000:11:00.0", 12028, line)])
+        self.assertEqual(parse.sxids(read("dmesg-after.txt")), [])
+
     def test_mokutil(self):
         self.assertTrue(parse.mokutil("SecureBoot enabled\n"))
         self.assertFalse(parse.mokutil("SecureBoot disabled\n"))
@@ -128,15 +140,16 @@ class TestParse(unittest.TestCase):
     def test_lspci_acs(self):
         flags, denied = parse.lspci_acs(read("lspci-vvv.txt"))
         self.assertEqual(denied, set())
-        self.assertEqual(len(flags), 16)
+        self.assertEqual(len(flags), 24)
         self.assertFalse(any(f["ReqRedir"] or f["CmpltRedir"] for f in flags.values()))
         _, denied = parse.lspci_acs("0000:08:00.0 PCI bridge: x\n\tCapabilities: <access denied>\n")
         self.assertEqual(denied, {"0000:08:00.0"})
 
     def test_fio(self):
         for rw in ("write", "read"):
-            gbs = parse.fio_gbs(read(f"fio-{rw}.json"), rw)
+            gbs, err = parse.fio_result(read(f"fio-{rw}.json"), rw)
             self.assertGreater(gbs, 0)
+            self.assertEqual(err, 0)
 
     def test_ofed(self):
         self.assertEqual(parse.ofed_version("OFED-internal-25.10-2.4.1:\n"), "OFED-internal-25.10-2.4.1")

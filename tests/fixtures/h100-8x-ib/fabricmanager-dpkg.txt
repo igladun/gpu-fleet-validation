@@ -1,1 +1,1 @@
-nvidia-fabricmanager 580.178.04-1ubuntu1
+ii  nvidia-fabricmanager 580.178.04-1ubuntu1

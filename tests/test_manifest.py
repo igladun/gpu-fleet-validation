@@ -43,17 +43,41 @@ class TestManifest(unittest.TestCase):
         cls, spec, _, _ = manifest.load(MANIFEST_JSON)
         self.assertEqual(cls, "hgx-h100-8x")
 
+    def assert_rejected(self, doc, *parts):
+        with self.assertRaises(manifest.ManifestError) as e:
+            manifest.load(self.write(doc))
+        for part in parts:
+            self.assertIn(part, str(e.exception))
+
     def test_missing_and_wrong_types(self):
         doc = self.base()
         spec = doc["class"]["hgx-h100-8x"]
         del spec["driver"]
         spec["gpus"] = True
+        self.assert_rejected(doc, "missing driver", "gpus must be int")
+
+    def test_table_values(self):
+        doc = self.base()
+        spec = doc["class"]["hgx-h100-8x"]
         spec["perf"]["rdma_write_bw_gbps"] = "fast"
-        with self.assertRaises(manifest.ManifestError) as e:
-            manifest.load(self.write(doc))
-        msg = str(e.exception)
-        for part in ("missing driver", "gpus must be int", "perf.rdma_write_bw_gbps must be a number"):
-            self.assertIn(part, msg)
+        spec["host"]["kernel_cmdline_contains"] = "iommu=pt"      # a string would be iterated per character
+        spec["host"]["pcie_acs"] = "off"
+        self.assert_rejected(doc, "perf.rdma_write_bw_gbps must be a number", "host.kernel_cmdline_contains",
+                             "host.pcie_acs")
+
+    def test_typos_do_not_silently_disable_checks(self):
+        doc = self.base()
+        spec = doc["class"]["hgx-h100-8x"]
+        spec["perf"]["nccl_allreduce_busbw_gbs_1nod"] = spec["perf"].pop("nccl_allreduce_busbw_gbs_1node")
+        spec["ncl"] = "2.28.9"
+        spec["host"]["secureboot"] = True
+        self.assert_rejected(doc, "unknown perf.nccl_allreduce_busbw_gbs_1nod", "unknown keys ['ncl']",
+                             "unknown host.secureboot")
+
+    def test_malformed_shapes(self):
+        for doc in ({"class": {"x": []}}, [], {"class": []}):
+            with self.assertRaises(manifest.ManifestError):
+                manifest.load(self.write(doc))
 
     def test_storage_needs_path(self):
         doc = self.base()

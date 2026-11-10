@@ -1,1 +1,1 @@
-index,uuid,name,pci.bus_id,driver_version,vbios_version,serial,persistence_mode,mig.mode.current,pcie.link.width.current,pcie.link.width.max,pcie.link.gen.current,pcie.link.gen.max,ecc.errors.uncorrected.volatile.total,ecc.errors.uncorrected.aggregate.total,compute_cap
+index,uuid,name,pci.bus_id,driver_version,vbios_version,serial,persistence_mode,mig.mode.current,pcie.link.width.current,pcie.link.width.max,pcie.link.gen.current,pcie.link.gen.max,ecc.errors.uncorrected.volatile.total,ecc.errors.uncorrected.aggregate.total,compute_cap,ecc.mode.current
