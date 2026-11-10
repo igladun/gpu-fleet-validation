@@ -6,11 +6,24 @@
   },
   "cuda_repo": {
     "base_url": "https://developer.download.nvidia.com/compute/cuda/repos",
-    "keyring_version": "1.1-1"
+    "keyring_version": "1.1-1",
+    "keyring_sha256": {
+      "ubuntu2204/x86_64": "d93190d50b98ad4699ff40f4f7af50f16a76dac3bb8da1eaaf366d47898ff8df",
+      "ubuntu2204/sbsa": "36d1aed84dfcf93ee9a0212d149f1c4187db92e03ab96a759ec0689aa438fd9e",
+      "ubuntu2404/x86_64": "d2a6b11c096396d868758b86dab1823b25e14d70333f1dfa74da5ddaf6a06dba",
+      "ubuntu2404/sbsa": "6ea7d2737648936820e85677177957a0f6521b840d98eb0bbae0a4f003fa7249"
+    }
   },
   "dcgm": {
-    "package": "datacenter-gpu-manager-4-cuda{cuda_major}",
-    "version": "1:4.8.0-1"
+    "packages": [
+      "datacenter-gpu-manager-4-cuda{cuda_major}",
+      "datacenter-gpu-manager-4-proprietary-cuda{cuda_major}",
+      "datacenter-gpu-manager-4-proprietary"
+    ],
+    "version": "1:4.8.0-1",
+    "extra": [
+      "libnuma1"
+    ]
   },
   "apt_tools": {
     "fio": "fio",
