@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Unit and end-to-end tests
+        run: python -m unittest discover -s tests -v
+
+  build:
+    name: lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/*.sh tests/fakebin/_shim.sh
+
+      - name: Build the single file
+        run: scripts/build-dist.sh
+
+      - name: Check the single file
+        run: |
+          set -euo pipefail
+          shellcheck dist/gfv-accept.sh
+          bash dist/gfv-accept.sh version
+          bash dist/gfv-accept.sh accept --class hgx-h100-8x --dry-run
+          bash -s -- accept --class hgx-h100-8x --dry-run < dist/gfv-accept.sh
+
+      - name: Upload the single file
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gfv-accept
+          path: dist/gfv-accept.sh
+          if-no-files-found: error
