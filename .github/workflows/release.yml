@@ -1,0 +1,163 @@
+name: Release
+
+# Push a tag vX.Y.Z on main (matching gfv/__init__.py __version__) to publish gfv.sh, gfv.pyz and SHA256SUMS.
+# A version with a suffix (v1.2.0-rc1) is published as a prerelease and never becomes "latest".
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: |
+            3.10
+            3.12
+
+      - name: Tagged commit is on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) is not on main"
+            exit 1
+          }
+
+      - name: Unit and end-to-end tests
+        run: python -m unittest discover -s tests
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/*.sh tests/fakebin/_shim.sh gfv-accept.sh
+
+      - name: Build the release assets
+        run: scripts/build-dist.sh
+
+      - name: Tag matches the built version
+        run: |
+          set -euo pipefail
+          built=$(python3 -I dist/gfv.pyz version | awk '{ print $2 }')
+          [ "$GITHUB_REF_NAME" = "v$built" ] || {
+            echo "::error::tag $GITHUB_REF_NAME does not match the built version $built (gfv/__init__.py)"
+            exit 1
+          }
+
+      - name: Check the release assets on every Python
+        env:
+          CHECK_PYTHONS: "3.10 3.12"
+        run: scripts/check-dist.sh dist
+
+      - name: Upload the release assets
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: |
+            dist/gfv.pyz
+            dist/gfv.sh
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: attest and publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write       # create the release
+      id-token: write       # sign the provenance attestation
+      attestations: write   # store it
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the release assets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Check the checksums
+        run: cd dist && sha256sum -c SHA256SUMS
+
+      - name: No release exists for this tag yet
+        run: |
+          # A re-run must not add a second (draft) release for the same tag: lookups by tag would then race.
+          if out=$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json isDraft 2>&1); then
+            echo "::error::a release for $GITHUB_REF_NAME already exists ($out); delete it first: gh release delete $GITHUB_REF_NAME"
+            exit 1
+          fi
+          grep -q "release not found" <<<"$out" || { echo "::error::cannot check for an existing release: $out"; exit 1; }
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/gfv.pyz
+            dist/gfv.sh
+
+      - name: Create a draft release
+        run: |
+          set -euo pipefail
+          sha=$(awk '$2 == "gfv.pyz" { print $1 }' dist/SHA256SUMS)
+          cat > notes.md <<'NOTES'
+          Run on the GPU node (Ubuntu 22.04 or 24.04 with a working NVIDIA driver):
+
+          ```sh
+          curl -fsSL https://github.com/@REPO@/releases/download/@TAG@/gfv.sh | sudo bash -s -- accept --class hgx-h100-8x
+          ```
+
+          `gfv.sh` is a short launcher: it downloads `gfv.pyz` from this release, checks its sha256 and runs it.
+          When the node can't reach GitHub, copy both files over and run `sudo GFV_PYZ="$PWD/gfv.pyz" bash gfv.sh accept --class hgx-h100-8x`.
+
+          - `gfv.pyz` sha256: `@SHA@`
+          - Verify a download: `sha256sum -c --ignore-missing SHA256SUMS`, or `gh attestation verify gfv.pyz -R @REPO@`
+          NOTES
+          sed -i -e "s|@REPO@|$GITHUB_REPOSITORY|g" -e "s|@TAG@|$GITHUB_REF_NAME|g" -e "s|@SHA@|$sha|g" notes.md
+          pre=()
+          case "$GITHUB_REF_NAME" in *-*) pre=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/gfv.sh dist/gfv.pyz dist/SHA256SUMS \
+            -R "$GITHUB_REPOSITORY" --verify-tag --draft "${pre[@]}" --title "$GITHUB_REF_NAME" --notes-file notes.md
+
+      - name: Draft assets match the build
+        run: |
+          set -euo pipefail
+          gh release download "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" -D draft
+          for f in gfv.pyz gfv.sh SHA256SUMS; do cmp "dist/$f" "draft/$f"; done
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          latest=(--latest)
+          case "$GITHUB_REF_NAME" in *-*) latest=(--latest=false) ;; esac
+          gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --draft=false "${latest[@]}"
+
+      - name: Run the published one-liner
+        run: |
+          set -euo pipefail
+          base="https://github.com/$GITHUB_REPOSITORY/releases"
+          get() { curl -fsSL --retry 5 --retry-all-errors "$1"; }
+          get "$base/download/$GITHUB_REF_NAME/gfv.sh" > gfv.sh
+          cmp gfv.sh dist/gfv.sh
+          bash gfv.sh version
+          bash -s -- accept --class hgx-h100-8x --dry-run < gfv.sh > /dev/null
+          case "$GITHUB_REF_NAME" in
+            *-*) ;;
+            *) get "$base/latest/download/gfv.sh" | grep -x "GFV_VERSION=\"${GITHUB_REF_NAME#v}\"" >/dev/null ||
+                 { echo "::error::releases/latest does not serve $GITHUB_REF_NAME"; exit 1; } ;;
+          esac
