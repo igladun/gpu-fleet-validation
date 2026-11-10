@@ -1,0 +1,7 @@
+Usage:
+  ib_write_bw            start a server and wait for connection
+  ib_write_bw <host>     connect to server at <host>
+
+Options:
+  -d, --ib-dev=<dev> Use IB device <dev> (default first device found)
+  -D, --duration Run test for a customized period of seconds.

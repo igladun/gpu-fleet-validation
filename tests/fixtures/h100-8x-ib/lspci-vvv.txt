@@ -1,0 +1,119 @@
+0000:08:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:09:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:0a:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:16:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:17:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:18:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:39:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:3a:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:3b:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:42:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:43:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:44:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:85:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:86:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:87:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:8e:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:8f:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:90:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:b6:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:b7:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:b8:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1
+
+0000:bf:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Upstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:c0:00.0 PCI bridge: PLX Technology, Inc. PEX 89144 PCIe Gen5 Switch (rev b0) (prog-if 00 [Normal decode])
+	Capabilities: [40] Express (v2) Downstream Port, MSI 00
+	Capabilities: [148 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl+ DirectTrans+
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+
+0000:c1:00.0 3D controller: NVIDIA Corporation GH100 [H100 SXM5 80GB] (rev a1)
+	Subsystem: NVIDIA Corporation Device 16c1

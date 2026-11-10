@@ -1,0 +1,584 @@
+GPU 0: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000000)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 1: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000001)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 2: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000002)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 3: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000003)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 4: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000004)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 5: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000005)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 6: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000006)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+
+GPU 7: NVIDIA H100 80GB HBM3 (UUID: GPU-00000000-0000-4000-8000-000000000007)
+	 Link 0: Replay Errors: 0
+	 Link 0: Recovery Errors: 0
+	 Link 0: CRC Errors: 0
+
+	 Link 1: Replay Errors: 0
+	 Link 1: Recovery Errors: 0
+	 Link 1: CRC Errors: 0
+
+	 Link 2: Replay Errors: 0
+	 Link 2: Recovery Errors: 0
+	 Link 2: CRC Errors: 0
+
+	 Link 3: Replay Errors: 0
+	 Link 3: Recovery Errors: 0
+	 Link 3: CRC Errors: 0
+
+	 Link 4: Replay Errors: 0
+	 Link 4: Recovery Errors: 0
+	 Link 4: CRC Errors: 0
+
+	 Link 5: Replay Errors: 0
+	 Link 5: Recovery Errors: 0
+	 Link 5: CRC Errors: 0
+
+	 Link 6: Replay Errors: 0
+	 Link 6: Recovery Errors: 0
+	 Link 6: CRC Errors: 0
+
+	 Link 7: Replay Errors: 0
+	 Link 7: Recovery Errors: 0
+	 Link 7: CRC Errors: 0
+
+	 Link 8: Replay Errors: 0
+	 Link 8: Recovery Errors: 0
+	 Link 8: CRC Errors: 0
+
+	 Link 9: Replay Errors: 0
+	 Link 9: Recovery Errors: 0
+	 Link 9: CRC Errors: 0
+
+	 Link 10: Replay Errors: 0
+	 Link 10: Recovery Errors: 0
+	 Link 10: CRC Errors: 0
+
+	 Link 11: Replay Errors: 0
+	 Link 11: Recovery Errors: 0
+	 Link 11: CRC Errors: 0
+
+	 Link 12: Replay Errors: 0
+	 Link 12: Recovery Errors: 0
+	 Link 12: CRC Errors: 0
+
+	 Link 13: Replay Errors: 0
+	 Link 13: Recovery Errors: 0
+	 Link 13: CRC Errors: 0
+
+	 Link 14: Replay Errors: 0
+	 Link 14: Recovery Errors: 0
+	 Link 14: CRC Errors: 0
+
+	 Link 15: Replay Errors: 0
+	 Link 15: Recovery Errors: 0
+	 Link 15: CRC Errors: 0
+
+	 Link 16: Replay Errors: 0
+	 Link 16: Recovery Errors: 0
+	 Link 16: CRC Errors: 0
+
+	 Link 17: Replay Errors: 0
+	 Link 17: Recovery Errors: 0
+	 Link 17: CRC Errors: 0
+

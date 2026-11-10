@@ -1,0 +1,50 @@
+[Wed Sep  9 13:00:19 2026] systemd[1]: netplan-ovs-cleanup.service - OpenVSwitch configuration for cleanup was skipped because of an unmet condition check (ConditionFileIsExecutable=/usr/bin/ovs-vsctl).
+[Wed Sep  9 13:00:20 2026] nvidia-nvlink: Nvlink Core is being initialized, major device number 235
+[Wed Sep  9 13:00:20 2026] nvidia-nvswitch: Probing device 0000:0f:00.0, Vendor Id = 0x10de, Device Id = 0x22a3, Class = 0x68000 
+[Wed Sep  9 13:00:20 2026] nvidia-nvswitch 0000:0f:00.0: enabling device (0100 -> 0102)
+[Wed Sep  9 13:00:21 2026] nvidia-nvswitch0: using MSI
+[Wed Sep  9 13:00:27 2026] nvidia-nvswitch: Probing device 0000:10:00.0, Vendor Id = 0x10de, Device Id = 0x22a3, Class = 0x68000 
+[Wed Sep  9 13:00:27 2026] nvidia-nvswitch 0000:10:00.0: enabling device (0100 -> 0102)
+[Wed Sep  9 13:00:28 2026] nvidia-nvswitch1: using MSI
+[Wed Sep  9 13:00:35 2026] nvidia-nvswitch: Probing device 0000:11:00.0, Vendor Id = 0x10de, Device Id = 0x22a3, Class = 0x68000 
+[Wed Sep  9 13:00:35 2026] nvidia-nvswitch 0000:11:00.0: enabling device (0100 -> 0102)
+[Wed Sep  9 13:00:36 2026] nvidia-nvswitch2: using MSI
+[Wed Sep  9 13:00:41 2026] nvidia-nvswitch: Probing device 0000:12:00.0, Vendor Id = 0x10de, Device Id = 0x22a3, Class = 0x68000 
+[Wed Sep  9 13:00:41 2026] nvidia-nvswitch 0000:12:00.0: enabling device (0100 -> 0102)
+[Wed Sep  9 13:00:43 2026] nvidia-nvswitch3: using MSI
+[Wed Sep  9 13:00:49 2026] NVRM: loading NVIDIA UNIX Open Kernel Module for x86_64  580.178.04  Release Build  (dvs-builder@U22-I3-AE18-16-4)  Tue Jul  7 12:18:12 UTC 2026
+[Wed Sep  9 13:00:49 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:00:52 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:00:55 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:00:57 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:01:00 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:01:02 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:01:05 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:01:07 2026] NVRM: gpuClearFbhubPoisonIntrForBug2924523_GA100: FBHUB Interrupt detected. Clearing it.
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvlink: nvlink driver open
+[Wed Sep  9 13:01:41 2026] nvidia-nvlink: nvlink driver close
+[Wed Sep  9 13:01:41 2026] nvidia-nvlink: nvlink driver open
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch0: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch1: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch2: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)
+[Wed Sep  9 13:01:41 2026] nvidia-nvswitch3: open (major=234)

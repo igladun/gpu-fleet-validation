@@ -1,0 +1,120 @@
+GPU 00000000:0A:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:18:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:3B:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:44:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:87:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:90:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:B8:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None
+GPU 00000000:C1:00.0
+    Fabric
+        State                                          : Completed
+        Status                                         : Success
+        CliqueId                                       : 0
+        ClusterUUID                                    : 00000000-0000-0000-0000-000000000000
+        Health
+            Summary                                    : N/A
+            Bandwidth                                  : N/A
+            Route Recovery in progress                 : N/A
+            Route Unhealthy                            : N/A
+            Access Timeout Recovery                    : N/A
+            Incorrect Configuration                    : N/A
+            Partition Assigned                         : N/A
+    Processes                                          : None

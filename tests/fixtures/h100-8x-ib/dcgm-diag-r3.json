@@ -1,0 +1,646 @@
+{
+  "DCGM Diagnostic": {
+    "test_categories": [
+      {
+        "category": "Deployment",
+        "tests": [
+          {
+            "name": "software",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          }
+        ]
+      },
+      {
+        "category": "Hardware",
+        "tests": [
+          {
+            "name": "memory",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "info": [
+                  "Allocated 83614211109 bytes (98.3%)"
+                ],
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          },
+          {
+            "name": "diagnostic",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 0 calculated at approximately 159446.35 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 1 calculated at approximately 159446.35 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 2 calculated at approximately 159446.35 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 3 calculated at approximately 157090.00 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 4 calculated at approximately 159446.35 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 5 calculated at approximately 158660.90 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 6 calculated at approximately 158660.90 gigaflops during this test"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "info": [
+                  "Allocated space for 138 double precision output matrices from 76014806630 bytes available.",
+                  "Running with precisions: FP64 1, FP32 1, FP16 1",
+                  "GPU 7 calculated at approximately 158660.90 gigaflops during this test"
+                ],
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          },
+          {
+            "name": "nvbandwidth",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          }
+        ]
+      },
+      {
+        "category": "Integration",
+        "tests": [
+          {
+            "name": "pcie",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.21 GB/s",
+                  "Host to GPU bandwidth:\t\t55.10 GB/s",
+                  "bidirectional bandwidth:\t76.08 GB/s",
+                  "GPU to Host latency:\t\t1.879 us",
+                  "Host to GPU latency:\t\t2.172 us",
+                  "bidirectional latency:\t\t3.274 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.25 GB/s",
+                  "Host to GPU bandwidth:\t\t55.10 GB/s",
+                  "bidirectional bandwidth:\t76.04 GB/s",
+                  "GPU to Host latency:\t\t1.904 us",
+                  "Host to GPU latency:\t\t2.303 us",
+                  "bidirectional latency:\t\t3.192 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.36 GB/s",
+                  "Host to GPU bandwidth:\t\t55.09 GB/s",
+                  "bidirectional bandwidth:\t101.03 GB/s",
+                  "GPU to Host latency:\t\t1.870 us",
+                  "Host to GPU latency:\t\t2.210 us",
+                  "bidirectional latency:\t\t3.262 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.36 GB/s",
+                  "Host to GPU bandwidth:\t\t55.09 GB/s",
+                  "bidirectional bandwidth:\t101.00 GB/s",
+                  "GPU to Host latency:\t\t1.890 us",
+                  "Host to GPU latency:\t\t2.242 us",
+                  "bidirectional latency:\t\t3.233 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.36 GB/s",
+                  "Host to GPU bandwidth:\t\t55.09 GB/s",
+                  "bidirectional bandwidth:\t101.04 GB/s",
+                  "GPU to Host latency:\t\t1.982 us",
+                  "Host to GPU latency:\t\t2.395 us",
+                  "bidirectional latency:\t\t3.731 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.36 GB/s",
+                  "Host to GPU bandwidth:\t\t55.10 GB/s",
+                  "bidirectional bandwidth:\t101.03 GB/s",
+                  "GPU to Host latency:\t\t1.954 us",
+                  "Host to GPU latency:\t\t2.404 us",
+                  "bidirectional latency:\t\t3.718 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.37 GB/s",
+                  "Host to GPU bandwidth:\t\t55.11 GB/s",
+                  "bidirectional bandwidth:\t101.06 GB/s",
+                  "GPU to Host latency:\t\t1.945 us",
+                  "Host to GPU latency:\t\t2.334 us",
+                  "bidirectional latency:\t\t3.727 us"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "info": [
+                  "GPU to Host bandwidth:\t\t55.36 GB/s",
+                  "Host to GPU bandwidth:\t\t55.12 GB/s",
+                  "bidirectional bandwidth:\t101.06 GB/s",
+                  "GPU to Host latency:\t\t1.941 us",
+                  "Host to GPU latency:\t\t2.290 us",
+                  "bidirectional latency:\t\t3.632 us"
+                ],
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          }
+        ]
+      },
+      {
+        "category": "Stress",
+        "tests": [
+          {
+            "name": "targeted_stress",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "info": [
+                  "GPU 0 relative stress level\t5580"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "info": [
+                  "GPU 1 relative stress level\t5375"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "info": [
+                  "GPU 2 relative stress level\t5431"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "info": [
+                  "GPU 3 relative stress level\t5413"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "info": [
+                  "GPU 4 relative stress level\t4959"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "info": [
+                  "GPU 5 relative stress level\t4964"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "info": [
+                  "GPU 6 relative stress level\t4966"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "info": [
+                  "GPU 7 relative stress level\t4966"
+                ],
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          },
+          {
+            "name": "targeted_power",
+            "results": [
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 0,
+                "info": [
+                  "GPU 0 max power: 698.8 W average power usage: 674.0 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 1,
+                "info": [
+                  "GPU 1 max power: 700.3 W average power usage: 675.8 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 2,
+                "info": [
+                  "GPU 2 max power: 699.5 W average power usage: 674.6 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 3,
+                "info": [
+                  "GPU 3 max power: 700.4 W average power usage: 676.3 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 4,
+                "info": [
+                  "GPU 4 max power: 699.3 W average power usage: 675.1 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 5,
+                "info": [
+                  "GPU 5 max power: 699.6 W average power usage: 675.3 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 6,
+                "info": [
+                  "GPU 6 max power: 700.4 W average power usage: 675.8 W"
+                ],
+                "status": "Pass"
+              },
+              {
+                "entity_group": "GPU",
+                "entity_group_id": 1,
+                "entity_id": 7,
+                "info": [
+                  "GPU 7 max power: 699.2 W average power usage: 675.6 W"
+                ],
+                "status": "Pass"
+              }
+            ],
+            "test_summary": {
+              "status": "Pass"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "entity_groups": [
+    {
+      "entities": [
+        {
+          "device_id": "2330",
+          "entity_id": 0,
+          "serial_num": "1650000000000"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 1,
+          "serial_num": "1650000000001"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 2,
+          "serial_num": "1650000000002"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 3,
+          "serial_num": "1650000000003"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 4,
+          "serial_num": "1650000000004"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 5,
+          "serial_num": "1650000000005"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 6,
+          "serial_num": "1650000000006"
+        },
+        {
+          "device_id": "2330",
+          "entity_id": 7,
+          "serial_num": "1650000000007"
+        }
+      ],
+      "entity_group": "GPU",
+      "entity_group_id": 1
+    }
+  ],
+  "metadata": {
+    "Driver Version Detected": "580.178.04",
+    "version": "4.6.1"
+  }
+}
