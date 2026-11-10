@@ -2,6 +2,49 @@
 
 Scripts that validate multi-node GPU training clusters: 8-GPU HGX-class nodes with one RDMA NIC per GPU, on an InfiniBand or RoCE fabric.
 
+## Run it
+
+Everything is in one file, [`gfv-accept.sh`](gfv-accept.sh). Run it on the GPU node itself. It needs Ubuntu 22.04 or 24.04 and a working NVIDIA driver; it installs everything else.
+
+**See what it would do.** This needs no root, checks nothing and changes nothing:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh | bash -s -- accept --class hgx-h100-8x --dry-run
+```
+
+**Accept a node.** This runs as root and takes about 30–40 minutes. Stop GPU workloads first; the gate refuses to run while GPU processes exist:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh | sudo bash -s -- accept --class hgx-h100-8x
+```
+
+**Over ssh**, so the run survives a dropped session:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh
+sudo nohup bash gfv-accept.sh accept --class hgx-h100-8x > accept.jsonl 2> accept.log &
+tail -f accept.log
+```
+
+More:
+- **Pin a version:** replace `main` in the URL with a commit SHA.
+- **Bundled node classes:** list them with `bash gfv-accept.sh classes`.
+- **Your own hardware:** pass a manifest file on the node with `--manifest my-class.json` instead of `--class`. Copy and edit [`manifests/hgx-h100-8x.toml`](manifests/hgx-h100-8x.toml); JSON works on every Python, TOML needs 3.11+.
+- **Every option:** `bash gfv-accept.sh accept --help`. The checks are documented in [docs/acceptance.md](docs/acceptance.md).
+
+**Exit codes:**
+- `0`: the node passed.
+- `1`: a check failed or could not run.
+- `2`: the gate itself could not run. Causes: not root, a bad manifest, no working driver, busy GPUs without `--force`, or an interrupted run.
+
+**Outputs:**
+- **stdout:** one JSON result line per check.
+- **Evidence directory:** `/var/lib/gpu-fleet-validation/runs/<run_id>/`, holding `SUMMARY.md`, `results.jsonl`, `junit.xml` and every raw tool output.
+
+> **Status:** the runner is tested against recorded output from a real 8x H100 HGX node, and its installer in Ubuntu containers. It has not yet run on GPU hardware. See [Status of the L2 gate](#status-of-the-l2-gate).
+
+## Test tiers
+
 The work is split into five test tiers. Each tier answers one question at one point in a node's life.
 
 | Tier | Question | When | Status |
@@ -19,44 +62,30 @@ Rules that hold across all tiers:
 
 ## L2 node acceptance gate
 
-L2 runs on the node itself, as root. It checks the node against its class manifest, then puts it under load:
+L2 checks the node against its class manifest, then puts it under load:
 
-- **Inventory and manifest diff:** GPU count and model; driver and CUDA; PCIe width; NUMA layout; kernel cmdline; Secure Boot; PCIe ACS; GPUDirect module; firmware.
+- **Inventory and manifest diff:** GPU count and model; driver and CUDA; ECC; PCIe width; NUMA layout; kernel cmdline; Secure Boot; PCIe ACS; GPUDirect module; firmware.
 - **NVLink:** link count and NVSwitch fabric state; NVSwitch count; Fabric Manager status and version.
 - **RDMA:** port state and rate; the GPU-to-NIC rail map; `ib_write_bw` loopback through the switch on every rail.
 - **DCGM:** `dcgmi diag -r 3`, plus per-GPU PCIe bandwidth floors.
 - **NCCL:** single-node `all_reduce_perf`, checking bus bandwidth, correctness and NCCL version.
 - **fio:** optional local-storage floors.
-- **Health deltas:** XIDs, ECC, remapped rows, and IB and NVLink error counters, compared before and after the load.
+- **Health deltas:** XIDs, SXids, ECC, remapped rows, and IB and NVLink error counters, compared before and after the load.
 
-The runner installs the tools it needs (DCGM, perftest, fio, a pinned nccl-tests build). Every apt change is simulated first and refused if it would remove anything, pull in a driver or kernel package, or upgrade the stack under test. Other dependency upgrades are listed in the results. A temporary NVIDIA CUDA apt repo is removed again afterwards. It never touches the GPU driver, Fabric Manager, OFED/DOCA or the kernel. To pre-stage the tools, e.g. in an image bake: `--only install --allow-partial`. A run takes about 30–40 minutes. Most of that is DCGM level 3. The first run adds about 5–10 minutes for installs.
+**Tools it installs:** DCGM, perftest, fio and a pinned nccl-tests build. Reruns reuse them.
 
-```sh
-scripts/build-dist.sh                                   # -> dist/gfv-accept.sh, one self-contained file
-scp dist/gfv-accept.sh node:
-ssh node sudo bash gfv-accept.sh accept --class hgx-h100-8x
-```
+**What it never touches:** the GPU driver, Fabric Manager, OFED/DOCA, the kernel or the system NCCL.
+- Every apt change is simulated first. It is refused if it would remove anything, pull in a driver or kernel package, or upgrade the stack under test.
+- Other dependency upgrades are allowed and listed in the results.
+- A temporary NVIDIA CUDA apt repo is removed again afterwards.
 
-The same file can be served from anywhere and piped into bash:
+**Pre-staging:** to install the tools without running the checks, e.g. in an image bake, run with `--only install --allow-partial`.
 
-```sh
-curl -fsSL https://<host>/gfv-accept.sh | sudo bash -s -- accept --class hgx-h100-8x
-```
-
-**Exit codes:**
-- `0`: the node passed.
-- `1`: a check failed or could not run.
-- `2`: the gate itself could not run. Causes: not root, a bad manifest, no working driver, or busy GPUs without `--force`.
-
-**Outputs:**
-- **stdout:** one JSON result line per check.
-- **Evidence directory:** `/var/lib/gpu-fleet-validation/runs/<run_id>/`, holding `SUMMARY.md`, `results.jsonl`, `junit.xml` and every raw tool output.
-
-See [docs/acceptance.md](docs/acceptance.md) for the checks, the manifest keys and the runbook.
+**Timing:** most of the 30–40 minutes is DCGM level 3. The first run adds about 5–10 minutes for installs.
 
 ## Status of the L2 gate
 
-The parsers and the whole runner are tested against recorded output from a real 8x H100 HGX node with NDR InfiniBand. The tests use fake tools and a fake `/sys` tree; see [tests/fixtures/README.md](tests/fixtures/README.md). The installer is tested end to end in an Ubuntu 24.04 container. The runner has not yet run on GPU hardware. [docs/acceptance.md](docs/acceptance.md#first-hardware-run) lists what that first run must confirm.
+The parsers and the whole runner are tested against recorded output from a real 8x H100 HGX node with NDR InfiniBand. The tests use fake tools and a fake `/sys` tree; see [tests/fixtures/README.md](tests/fixtures/README.md). The installer is tested end to end in Ubuntu containers. The runner has not yet run on GPU hardware. [docs/acceptance.md](docs/acceptance.md#first-hardware-run) lists what that first run must confirm.
 
 **Known finding:** on the reference node, DCGM measured 76 GB/s bidirectional PCIe bandwidth on GPU 0 and GPU 1, against 101 GB/s on GPUs 2–7. The shipped floor is 95 GB/s, so replaying that node fails exactly those two checks. The tests assert that result.
 
@@ -64,9 +93,11 @@ The parsers and the whole runner are tested against recorded output from a real 
 
 ```sh
 python3 -m unittest discover -s tests -v     # Python 3.10+; nothing to install
-scripts/build-dist.sh                        # needs Python 3.11+ (TOML manifests -> bundled JSON)
-bash dist/gfv-accept.sh accept --class hgx-h100-8x --dry-run
+scripts/build-dist.sh                        # rebuilds gfv-accept.sh; needs Python 3.11+
+bash gfv-accept.sh accept --class hgx-h100-8x --dry-run
 ```
+
+`gfv-accept.sh` is generated from `gfv/`, `manifests/` and `scripts/wrapper.sh.in`; don't edit it by hand. The build is reproducible: the same sources give the same bytes on any OS. A test fails when the committed file no longer matches the sources, so rebuild and commit it with every source change.
 
 The runtime uses only the Python standard library. The node needs nothing but `python3` ≥ 3.10, and the single file installs that on Ubuntu if it is missing.
 

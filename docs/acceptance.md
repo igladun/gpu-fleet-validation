@@ -10,11 +10,17 @@ It runs on the node as root and installs the test tools it needs. The node passe
 ## Running it
 
 ```sh
+# straight from GitHub
+curl -fsSL https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh | sudo bash -s -- accept --class hgx-h100-8x
+
+# or download once, then run
+curl -fsSLO https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh
 sudo bash gfv-accept.sh accept --class hgx-h100-8x                 # bundled class manifest
 sudo bash gfv-accept.sh accept --manifest my-class.json             # your own manifest
-sudo bash gfv-accept.sh accept --class hgx-h100-8x --dry-run        # print the plan only
-curl -fsSL https://<host>/gfv-accept.sh | sudo bash -s -- accept --class hgx-h100-8x
+bash gfv-accept.sh accept --class hgx-h100-8x --dry-run             # print the plan only (no root)
 ```
+
+To pin a version, replace `main` in the URL with a commit SHA.
 
 From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A checkout run needs Python 3.11+ to read the TOML manifests; the single file needs only 3.10.
 
@@ -184,8 +190,9 @@ Re-measure the floors on the first healthy nodes of each class. Never copy floor
 ## Runbook
 
 1. Drain the node from the scheduler. Stop anything using the GPUs: training, inference servers, notebooks.
-2. Copy the single file over, or curl it, and run it as root. Use `tmux` or `nohup` so the run survives a dropped ssh session. Under `nohup`, SIGHUP stays ignored; any other SIGHUP or SIGTERM stops the run cleanly with exit 2:
+2. Download the single file and run it as root. Use `tmux` or `nohup` so the run survives a dropped ssh session. Under `nohup`, SIGHUP stays ignored; any other SIGHUP or SIGTERM stops the run cleanly with exit 2:
    ```sh
+   curl -fsSLO https://raw.githubusercontent.com/igladun/gpu-fleet-validation/main/gfv-accept.sh
    sudo nohup bash gfv-accept.sh accept --class hgx-h100-8x --node "$(hostname)" > accept.jsonl 2> accept.log &
    tail -f accept.log
    ```
