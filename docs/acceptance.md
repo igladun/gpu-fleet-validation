@@ -262,30 +262,54 @@ The evidence directory gets `burnin-temperatures.csv` (seconds, then one column 
 
 ## Status
 
-v0.1.0 has run on one 8x H100 HGX node; see [First hardware run](#first-hardware-run).
+v0.2.0 passed a full run on an 8x H100 HGX node in 58 minutes:
+- **Burn-in:** 30 minutes at 699 W per GPU, with temperatures level at 60–73 °C, 14–27 °C under the 87 °C limit, and no throttling.
+- **NCCL:** all_reduce reached 479.8 GB/s.
+- **RDMA:** 365–367 Gb/s on every rail.
+- **GPUDirect RDMA:** only 110–205 Gb/s, flagged as a warning; most likely the node's IOMMU in translated mode.
+
+See [First hardware run](#first-hardware-run).
 
 The parsers and the whole runner are also tested against recorded output from a second 8x H100 HGX node, with fake tools and a fake `/sys` tree; see [tests/fixtures/README.md](../tests/fixtures/README.md). That replay keeps the old bidirectional-only PCIe floor, so it fails exactly the GPU 0 and GPU 1 bidirectional checks, and the tests assert that. The installer is tested end to end in Ubuntu containers.
 
 ## First hardware run
 
-v0.1.0 ran on an 8x H100 SXM HGX node with 8 NDR rails, on Ubuntu 26.04, driver 615 (open kernel module) and DCGM 4.7.0. No hardware fault was found. The run confirmed or fixed the following.
+v0.1.0, then v0.2.0, ran on an 8x H100 SXM HGX node with 8 NDR rails, on Ubuntu 26.04, driver 615 (open kernel module) and DCGM 4.7.0. No hardware fault was found.
+
+The full v0.2.0 run took 58 min and passed: 100 checks passed, 9 warnings, 0 fail. Its measurements:
+
+| What | Measured | Floor or limit |
+|---|---|---|
+| Burn-in, 30 min at the power limit | 698.6–699.1 W median per GPU; no thermal slowdown or power brake | ≥ 665 W |
+| GPU temperature under load | levels off within 1 minute at 60–73 °C (slope 0.02 °C/min) | 87 °C max operating, fail above 82 °C |
+| HBM temperature under load | 55–65 °C | 95 °C max operating, fail above 85 °C |
+| Spread between GPUs | 13 °C (GPU7 73 °C, GPU6 60 °C) | warn above 15 °C |
+| NCCL all_reduce, 8 GiB, 8 GPUs | 479.8 GB/s, NCCL 2.32.3 | ≥ 455 |
+| RDMA loopback, NUMA-pinned | 365–367 Gb/s on all 8 rails | ≥ 350 |
+| PCIe one-way, per GPU | 53.9–55.3 GB/s | ≥ 50 |
+| PCIe bidirectional, per GPU | 67–68 (GPU0/1), 84–88 (GPU2–7) GB/s | warn below 65 |
+| GPUDirect RDMA over DMA-BUF | 110 Gb/s (both GPUs under one PCIe switch), 205 Gb/s (GPUs on different sockets) | `warn` below 350 |
+
+GPUDirect is the one weak result. On one rail pair, writing into GPU memory reached 191 Gb/s, reading from GPU memory 139 Gb/s, and host memory on both sides 366 Gb/s. The device and pinned memory types both gave the same result. The node boots with the IOMMU in translated mode (no `iommu=pt`), which routes NIC↔GPU peer traffic through the root complex, and the pairs that share a PCIe switch are slowest. Confirming that needs a reboot with `iommu=pt`. Until then a GPUDirect floor stays unset, and the check warns.
 
 **Confirmed on hardware:**
 - **ACS parsing:** ACS controls are readable on the 24 PCIe switch ports above the 8 GPUs and 8 NICs.
 - **Output formats:** `mokutil --sb-state` and `ofed_info -s` parse as expected.
 - **Loopback ring:** all 8 rails report bandwidth.
 - **DCGM:** the 4.7 level-3 test names are unchanged, and the runner reused the node's own host engine.
-- **PCIe pattern:** GPU 0 and GPU 1 again had the lowest bidirectional PCIe bandwidth (67 GB/s here, 76 GB/s on the first reference node). One-way bandwidth is 53–55 GB/s on every GPU of both nodes, so the links are healthy and the dip is host-side. The check now gates on one-way bandwidth (`dcgm.pcie_oneway`).
+- **Burn-in tooling:** `targeted_power.test_duration` is honoured (1800 s requested, 1812 s run). `dcgmi dmon` columns follow the `-e` order. The `clocks_event_reasons_counters.*` fields read on driver 615.
+- **nccl-tests 2.21.1** builds and runs against NCCL 2.32.3.
+- **PCIe pattern:** GPU 0 and GPU 1 have the lowest bidirectional PCIe bandwidth on both nodes (67 GB/s here, 76 GB/s on the first reference node). One-way bandwidth is 53–55 GB/s on every GPU of both nodes, so the links are healthy and the dip is host-side. The check now gates on one-way bandwidth (`dcgm.pcie_oneway`).
 
-**Fixed after the run:**
+**Fixed after v0.1.0:**
 - **Driver 615 banner:** `nvidia-smi` prints `KMD Version` and `CUDA UMD Version`. The parser reads both layouts and falls back to the per-GPU driver version. An unreadable value is now `error`, never a `fail` with an empty value.
 - **Fabric Manager on hold:** the package is installed but held (`hi`). It now counts as installed.
-- **GPUDirect:** `nvidia_peermem` was not loaded, so the peermem path could not register GPU memory (`error=14`). The GPUDirect check now tries DMA-BUF first.
+- **GPUDirect:** `nvidia_peermem` was not loaded, so the peermem path could not register GPU memory (`error=14`). The GPUDirect check now tries DMA-BUF first. With `host.gpudirect = true`, the test must run.
 - **NCCL pin:** the pinned NCCL 2.28.9 does not exist in NVIDIA's Ubuntu 26.04 repo, which has 2.30.7–2.32.3. The manifest now pins 2.32.3, and the install error lists what the repo offers.
-- **RDMA placement:** two RDMA pairs measured 327 and 335 Gb/s, while the rest of the ring measured 353–367 Gb/s. The test ran unpinned on a 4-NUMA-node host. Server and client now run on the NIC's local CPUs.
+- **RDMA placement:** two RDMA pairs measured 327 and 335 Gb/s on an unpinned run. Pinned to the NIC's local CPUs, all 8 measure 365–367 Gb/s.
 - **Manifest:** the manifest now describes this node: 4 NUMA nodes, IOMMU in translated mode, Secure Boot off, no `nvidia_peermem` requirement. It also adds the power limit, the temperature limits and the burn-in.
 
 **Still open:**
 - Signals through sudo: start with `sudo nohup bash gfv.sh …`, send SIGTERM to `sudo`, and expect exit 2.
-- nccl-tests 2.21.1 against NCCL 2.32.
-- The RDMA and NCCL floors on the new node.
+- A GPUDirect floor, once the IOMMU question is settled.
+- `libnvidia-nscq` is missing on the node, so DCGM cannot see the NVSwitches (`warn`).

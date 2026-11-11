@@ -49,7 +49,7 @@ gpu_shutdown_c = 95              # the GPU powers off
 mem_max_operating_c = 95         # HBM3
 
 [class."hgx-h100-8x".burnin]     # every GPU at its power limit (DCGM targeted_power), telemetry every 5 s
-minutes = 30                     # long enough to reach steady state; use --burnin-minutes for a longer soak
+minutes = 30                     # measured: temperatures level off within 1 minute at 60-73 C; longer soaks: --burnin-minutes
 power_min_w = 665                # median draw per GPU after ramp-up (95 % of 700 W)
 gpu_temp_warn_c = 77             # 10 C under the max operating temperature
 gpu_temp_max_c = 82              # 5 C under the max operating temperature; above = fail
@@ -57,8 +57,8 @@ mem_temp_max_c = 85              # 10 C under the HBM max operating temperature
 gpu_temp_spread_c = 15           # hottest minus coolest GPU at steady state; above = warn (fan or heatsink zone)
 
 [class."hgx-h100-8x".perf]       # floors = healthy reference minus margin
-nccl_allreduce_busbw_gbs_1node = 455   # measured 478.6 @ 8 GiB with NVLS on the previous reference node
-rdma_write_bw_gbps = 350               # measured 365-368 loopback, single QP, 64 KiB (previous node)
+nccl_allreduce_busbw_gbs_1node = 455   # measured 479.8 @ 8 GiB (NCCL 2.32.3); 478.6 on the previous reference node
+rdma_write_bw_gbps = 350               # measured 365-367 loopback, NUMA-pinned, single QP, 64 KiB
 dcgm_pcie_oneway_gbs = 50              # measured 53-55 per direction on every GPU
 dcgm_pcie_bidir_gbs = 65               # measured 67-90 (host-side limit); below = warn while one-way passes
 
