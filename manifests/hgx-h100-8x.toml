@@ -1,7 +1,7 @@
 # Node-class manifest: what a healthy node of this class looks like.
 # Expected values live here, never in test code. Floors = healthy reference minus margin;
 # re-measure them on your own first healthy nodes and never copy floors between classes.
-# Keys documented in docs/acceptance.md. Sections a tier does not read are ignored by it.
+# Keys documented in docs/manifest.md. Sections a tier does not read are ignored by it.
 # Reference node: 8x H100 SXM HGX, 2x Xeon 8480+, Ubuntu 26.04, driver 615 (open kernel module), 8x NDR IB.
 
 [class."hgx-h100-8x"]

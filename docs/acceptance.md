@@ -7,7 +7,27 @@ L2 decides whether one node is fit to take work. Run it when:
 
 It runs on the node as root and installs the test tools it needs. The node passes only if every check passes. The gate fails closed: a check that cannot run is an `error`, and an error fails the node.
 
+L2 checks the node against its class [manifest](manifest.md), then puts it under load:
+
+- **Inventory and manifest diff:** GPU count and model; driver and CUDA; GPU power limit; ECC; PCIe width; NUMA layout; kernel cmdline; Secure Boot; PCIe ACS; GPUDirect module; firmware.
+- **NVLink:** link count and NVSwitch fabric state; NVSwitch count; Fabric Manager status and version.
+- **RDMA:** port state and rate; the GPU-to-NIC rail map; `ib_write_bw` loopback through the switch on every rail, pinned to each NIC's NUMA node; GPUDirect RDMA over DMA-BUF or nvidia-peermem.
+- **DCGM:** `dcgmi diag -r 3`, plus per-GPU PCIe bandwidth floors (one-way gates the link, bidirectional warns).
+- **Burn-in:** every GPU at its power limit for 30 minutes. Checks peak GPU and HBM temperature against the manifest's thresholds, the GPU's own temperature limits, the spread between GPUs, any thermal or power-brake throttling, sustained power, and whether temperatures levelled off. See [Burn-in and temperatures](#burn-in-and-temperatures).
+- **NCCL:** single-node `all_reduce_perf`, checking bus bandwidth, correctness and NCCL version.
+- **fio:** optional local-storage floors.
+- **Health deltas:** XIDs, SXids, ECC, remapped rows, and IB and NVLink error counters, compared before and after the load.
+
+[Stages and checks](#stages-and-checks) lists every check.
+
 ## Running it
+
+Run it on the GPU node itself. It needs Ubuntu 22.04, 24.04 or 26.04 and a working NVIDIA driver; it installs everything else. Stop GPU workloads first; the gate refuses to run while GPU processes exist.
+
+Each [release](https://github.com/igladun/gpu-fleet-validation/releases) has three files:
+- `gfv.sh`: a short launcher you can read in a minute. It downloads `gfv.pyz` from the same release, checks its sha256 and runs it with `python3`. It installs `python3` first if the node lacks it.
+- `gfv.pyz`: the code, a Python zipapp built from [`gfv/`](../gfv/) and [`manifests/`](../manifests/). List it with `python3 -m zipfile -l gfv.pyz`.
+- `SHA256SUMS`.
 
 ```sh
 # latest release
@@ -16,11 +36,27 @@ curl -fsSL https://github.com/igladun/gpu-fleet-validation/releases/latest/downl
 # or download the launcher once, then run
 curl -fsSLO https://github.com/igladun/gpu-fleet-validation/releases/latest/download/gfv.sh
 sudo bash gfv.sh accept --class hgx-h100-8x                 # bundled class manifest
-sudo bash gfv.sh accept --manifest my-class.json             # your own manifest
-bash gfv.sh accept --class hgx-h100-8x --dry-run             # print the plan only (no root)
+sudo bash gfv.sh accept --manifest my-class.toml             # your own manifest, see manifest.md
+bash gfv.sh accept --class hgx-h100-8x --dry-run             # print the plan only: no root, checks and changes nothing
+bash gfv.sh classes                                          # list the bundled classes
+bash gfv.sh accept --help                                    # every option
 ```
 
-`gfv.sh` downloads `gfv.pyz` from its own release and checks its sha256 before running it. To pin a version, replace `latest/download` with `download/v<version>`. When the node can't reach GitHub, copy `gfv.sh` and `gfv.pyz` from the same release and run `sudo GFV_PYZ="$PWD/gfv.pyz" bash gfv.sh accept …`; the launcher still checks the sha256. See [Tool install](#tool-install) for what the install stage still downloads.
+To keep a run alive over ssh, start it under `nohup` or `tmux`; see the [Runbook](#runbook).
+
+**Timing:** about an hour: DCGM level 3 (about 25 minutes) and the burn-in (30 minutes). The first run adds about 5–10 minutes for installs. For a quick check, `--skip burnin --allow-partial`.
+
+**Pin a version:** replace `latest/download` with `download/<tag>`, e.g. `download/v0.1.0`. Each `gfv.sh` carries the version and sha256 of its own `gfv.pyz`.
+
+**Verify a download:** `sha256sum -c --ignore-missing SHA256SUMS`, or `gh attestation verify gfv.pyz -R igladun/gpu-fleet-validation` to check that the release workflow built it from this repo.
+
+**When the node can't reach GitHub**, copy `gfv.sh` and `gfv.pyz` from the same release to the node. `GFV_PYZ` makes the launcher use the local copy, and it still checks the sha256 it carries:
+
+```sh
+sudo GFV_PYZ="$PWD/gfv.pyz" bash gfv.sh accept --class hgx-h100-8x
+```
+
+The install stage still needs apt, NVIDIA's CUDA repo and github.com for nccl-tests; see [Tool install](#tool-install). Where those are blocked, install the tools yourself and add `--no-install`.
 
 From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A checkout run needs Python 3.11+ to read the TOML manifests; `gfv.pyz` bundles them as JSON and needs only 3.10.
 
@@ -52,7 +88,7 @@ From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A chec
   - GPU processes running without `--force`
   - the run was interrupted (SIGTERM, SIGHUP, Ctrl-C) before it finished
 
-With `curl … | sudo bash`, a failed download gives bash an empty script, and the pipe exits 0. Automation must download first or use `set -o pipefail`, and read `results.jsonl`, not only the exit code.
+**In automation, don't trust the exit code of `curl … | bash`.** If curl fails, bash reads an empty script and exits 0. Download first (`curl -fsSLO …/gfv.sh && sudo bash gfv.sh …`) or run the pipe under `set -o pipefail`, and read `results.jsonl`, not only the exit code. A truncated download can't pass: the launcher is one `{ … }` block, so any cut after its first line is a syntax error and exits 2.
 
 A partial run (`--only`/`--skip`) exits `1` unless `--allow-partial` is given. Every stage it left out is recorded as `<stage>.not_selected`.
 
@@ -183,27 +219,7 @@ The evidence directory holds:
 
 ## Manifest
 
-A manifest describes one node class. See [`manifests/hgx-h100-8x.toml`](../manifests/hgx-h100-8x.toml).
-
-| Key | Type | Meaning |
-|---|---|---|
-| `gpus`, `gpu_name` | int, str | GPU count and `nvidia-smi` product name |
-| `driver`, `cuda` | str | driver version, and the CUDA version the driver reports |
-| `nccl` | str | NCCL version used for the nccl-tests build; must exist for the driver's CUDA |
-| `pcie_width` | int | expected link width of every GPU and RDMA NIC |
-| `nvlinks_total`, `nvswitches`, `nvswitch_pci_device` | int, int, str | NVLink count, NVSwitch count, NVSwitch PCI device ID |
-| `rdma_nics`, `rdma_rate_gbps`, `rdma_link_layer` | int, int, str | rails, port rate, `InfiniBand` or `Ethernet` |
-| `numa_nodes` | int | NUMA node count |
-| `gpu_power_limit_w` | int | enforced power limit of every GPU in W (optional) |
-| `[host]` | table | `kernel_cmdline_contains` (list), `pcie_acs` (`disabled`/`enabled`), `secure_boot` (bool), `nvidia_peermem` (bool, optional), `gpudirect` (bool, optional: the GPUDirect RDMA test must run and work), `power_profile` (reported as skip) |
-| `[firmware]` | table of lists | `bios`, `gpu_vbios`, `nic` allowlists; `bmc` is reported as skip |
-| `[thermal]` | table of numbers | the GPU's own limits in °C: `gpu_max_operating_c`, `gpu_slowdown_c`, `gpu_shutdown_c`, `mem_max_operating_c` |
-| `[burnin]` | table | `minutes` (int), and thresholds `power_min_w`, `gpu_temp_warn_c`, `gpu_temp_max_c`, `mem_temp_max_c`, `gpu_temp_spread_c`. A value a threshold needs but the GPU does not report is `error`; leave the threshold out to skip that check. Without the table the burn-in stage is skipped, and `--burnin-minutes` is an `error` |
-| `[perf]` | table of numbers | `nccl_allreduce_busbw_gbs_1node`, `rdma_write_bw_gbps`, `dcgm_pcie_oneway_gbs`, `dcgm_pcie_bidir_gbs` |
-| `[storage]` | table | `path` (required), `size_gib`, `seq_write_gbs`, `seq_read_gbs` |
-| `[k8s]` | table | for the in-cluster tiers; L2 ignores it |
-
-Re-measure the floors on the first healthy nodes of each class. Never copy floors between classes. The README has a step-by-step guide: [Add a manifest for your node class](../README.md#add-a-manifest-for-your-node-class).
+The manifest keys, and how to write a manifest for a new node class, are in [manifest.md](manifest.md).
 
 ## Burn-in and temperatures
 
@@ -243,6 +259,12 @@ The evidence directory gets `burnin-temperatures.csv` (seconds, then one column 
    ```
 3. Read `SUMMARY.md` in the evidence directory and archive the whole directory.
 4. On exit 0, return the node to service. On exit 1, keep it out, fix what failed, and run again. Exit 2 means the gate never ran.
+
+## Status
+
+v0.1.0 has run on one 8x H100 HGX node; see [First hardware run](#first-hardware-run).
+
+The parsers and the whole runner are also tested against recorded output from a second 8x H100 HGX node, with fake tools and a fake `/sys` tree; see [tests/fixtures/README.md](../tests/fixtures/README.md). That replay keeps the old bidirectional-only PCIe floor, so it fails exactly the GPU 0 and GPU 1 bidirectional checks, and the tests assert that. The installer is tested end to end in Ubuntu containers.
 
 ## First hardware run
 
