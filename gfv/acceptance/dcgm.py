@@ -34,7 +34,7 @@ def run(ctx, level):
             stop_hostengine(ctx)
 
 
-def ensure_hostengine(ctx):
+def ensure_hostengine(ctx, check="dcgm.diag"):
     """True if we started nv-hostengine (and must stop it), False if one was running, None on failure.
     A started engine is always stopped by the caller, even if the probe after starting it fails."""
     if ctx.run("dcgmi-probe", ["dcgmi", "discovery", "-l"], timeout=60).ok:
@@ -42,7 +42,7 @@ def ensure_hostengine(ctx):
     # Output goes to a file, not a pipe: a daemon that keeps the pipe open would hang the read.
     st = ctx.proc.run("nv-hostengine-start", ["nv-hostengine"], timeout=60, env_extra=ctx.env_extra(), to_file=True)
     if not st.ok:
-        ctx.add("dcgm.diag", "error", None, None, None, f"no DCGM host engine and could not start one ({st.why()})")
+        ctx.add(check, "error", None, None, None, f"no DCGM host engine and could not start one ({st.why()})")
         return None
     ctx.facts["hostengine_started"] = True          # from here on, run() always stops it
     ctx.notes.append("nv-hostengine was not running; started for the diagnostic and stopped afterwards")
@@ -50,7 +50,7 @@ def ensure_hostengine(ctx):
         ctx.sleep(1)
         if ctx.run("dcgmi-probe-after-start", ["dcgmi", "discovery", "-l"], timeout=60).ok:
             return True
-    ctx.add("dcgm.diag", "error", None, None, None, "started nv-hostengine but dcgmi cannot reach it")
+    ctx.add(check, "error", None, None, None, "started nv-hostengine but dcgmi cannot reach it")
     return None
 
 
@@ -118,17 +118,38 @@ def diag(ctx, level):
 
 
 def pcie_floor(ctx, rows, evidence):
+    """One-way bandwidth per direction is the link-health gate (it sits at the Gen5 x16 ceiling on a healthy GPU).
+    Bidirectional bandwidth also depends on the host (IOMMU mode, NUMA layout, root complex): below its floor it
+    fails only when no one-way floor is set or one-way also fails; otherwise it is a warning."""
     floor = ctx.perf("dcgm_pcie_bidir_gbs")
+    oneway = ctx.perf("dcgm_pcie_oneway_gbs")
     if not rows:
-        if floor is not None:
+        if floor is not None or oneway is not None:
             ctx.add("dcgm.pcie_bidir", "error", None, None, floor, "no pcie plugin results at this level")
         return
     for r in sorted(rows, key=lambda r: (r["entity"] is None, r["entity"])):
-        bw = parse.dcgm_pcie_bidir(r["info"])
+        bw = parse.dcgm_pcie(r["info"])
         target = f"GPU{r['entity']}"
-        if bw is None:
+        link_ok = None
+        if oneway is not None:
+            g2h, h2g = bw["gpu_to_host"], bw["host_to_gpu"]
+            detail = f"GB/s; GPU to host {g2h}, host to GPU {h2g}"
+            if g2h is None or h2g is None:
+                ctx.add("dcgm.pcie_oneway", "error", target, None, oneway, "no one-way bandwidth lines", evidence)
+            else:
+                link_ok = min(g2h, h2g) >= oneway
+                ctx.add("dcgm.pcie_oneway", "pass" if link_ok else "fail", target, min(g2h, h2g), oneway, detail,
+                        evidence)
+        bidir = bw["bidir"]
+        if bidir is None:
             ctx.add("dcgm.pcie_bidir", "error", target, None, floor, "no bidirectional bandwidth line", evidence)
         elif floor is None:
-            ctx.add("dcgm.pcie_bidir", "info", target, bw, None, "GB/s; no floor in manifest", evidence)
+            ctx.add("dcgm.pcie_bidir", "info", target, bidir, None, "GB/s; no floor in manifest", evidence)
+        elif bidir >= floor:
+            ctx.add("dcgm.pcie_bidir", "pass", target, bidir, floor, "GB/s", evidence)
+        elif link_ok:
+            ctx.add("dcgm.pcie_bidir", "warn", target, bidir, floor,
+                    "GB/s; one-way passes, so the link is healthy and the limit is host-side "
+                    "(IOMMU translation, NUMA layout, root complex)", evidence)
         else:
-            ctx.add("dcgm.pcie_bidir", "pass" if bw >= floor else "fail", target, bw, floor, "GB/s", evidence)
+            ctx.add("dcgm.pcie_bidir", "fail", target, bidir, floor, "GB/s", evidence)

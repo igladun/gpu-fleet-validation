@@ -12,7 +12,7 @@ import tempfile
 import unittest
 import zipfile
 
-from helpers import REPO, FakeNode
+from helpers import MANIFEST_JSON, REPO, FakeNode
 from test_accept import REFERENCE_FAILS
 
 from gfv import __version__
@@ -109,8 +109,10 @@ class TestDist(unittest.TestCase):
         log = os.path.join(self.node.tmp, "dl.log")
         return d, {"FAKE_DL_LOG": log, "FAKE_DL_SRC": self.pyz, "FAKE_DL_MODE": mode}, log
 
-    def args(self):
-        return ["accept", "--class", "hgx-h100-8x", "--no-install", "--node", "gpu-node-01",
+    def args(self, bundled=False):
+        """Runs check results against the reference manifest (the fixtures' node); bundled=True uses --class."""
+        which = ["--class", "hgx-h100-8x"] if bundled else ["--manifest", MANIFEST_JSON]
+        return ["accept", *which, "--no-install", "--node", "gpu-node-01",
                 "--out", self.node.out, "--tools-dir", self.node.tools_dir]
 
     def results(self):
@@ -125,12 +127,17 @@ class TestDist(unittest.TestCase):
             return f.read()
 
     def test_file_run_uses_bundled_manifest(self):
+        p = subprocess.run(["bash", self.stub, *self.args(bundled=True), "--dry-run"], env=self.env(),
+                           capture_output=True, text=True, timeout=120, cwd=self.node.tmp)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("class hgx-h100-8x from bundled:hgx-h100-8x.json", p.stdout)
+        self.assertIn("power limit 700 W", p.stdout)
+        self.assertIn("burnin: dcgmi diag -r targeted_power", p.stdout)
+        self.assertIn("verified", p.stderr)
         p = subprocess.run(["bash", self.stub, *self.args()], env=self.env(), capture_output=True, text=True,
                            timeout=120, cwd=self.node.tmp)
         self.assertEqual(p.returncode, 1, p.stderr)
         self.assertEqual(self.failing(), REFERENCE_FAILS)
-        self.assertIn("bundled:hgx-h100-8x.json", p.stderr)
-        self.assertIn("verified", p.stderr)
         self.assertEqual(os.listdir(self.tmpdir), [], "launcher must remove its temp dir")
 
     def test_stdin_run_like_curl_pipe(self):

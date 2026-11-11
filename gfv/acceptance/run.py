@@ -13,10 +13,10 @@ from ..common import install, manifest
 from ..common.proc import Proc
 from ..common.results import Recorder, utcnow
 from ..common.sysinfo import SysFS
-from . import dcgm, fio, health, inventory, nccl, nvlink, parse, rdma
+from . import burnin, dcgm, fio, health, inventory, nccl, nvlink, parse, rdma
 from .context import Ctx, discover
 
-STAGES = ("install", "inventory", "nvlink", "rdma", "health", "dcgm", "nccl", "fio")
+STAGES = ("install", "inventory", "nvlink", "rdma", "health", "dcgm", "burnin", "nccl", "fio")
 DEFAULT_OUT = "/var/lib/gpu-fleet-validation/runs"
 DEFAULT_TOOLS = "/opt/gpu-fleet-validation/tools"
 EXIT_PASS, EXIT_FAIL, EXIT_CANNOT_RUN = 0, 1, 2
@@ -31,6 +31,8 @@ def add_arguments(p):
     p.add_argument("--only", help="comma-separated stages to run: " + ",".join(STAGES))
     p.add_argument("--skip", help="comma-separated stages to skip")
     p.add_argument("--dcgm-level", type=int, default=3, choices=(1, 2, 3, 4), help="dcgmi diag level (default 3)")
+    p.add_argument("--burnin-minutes", type=_positive_int, metavar="N",
+                   help="burn-in length at the power limit (default: the manifest's burnin.minutes)")
     p.add_argument("--node", default=socket.gethostname(), help="node name in results (default: hostname)")
     p.add_argument("--cluster", help="cluster label for results")
     p.add_argument("--rack", help="rack label for results")
@@ -40,6 +42,13 @@ def add_arguments(p):
     p.add_argument("--allow-partial", action="store_true",
                    help="with --only/--skip: let a partial run pass (it fails by default; e.g. pre-staging tools)")
     p.add_argument("--dry-run", action="store_true", help="validate the manifest and print the plan; run nothing")
+
+
+def _positive_int(v):
+    n = int(v)
+    if n < 1:
+        raise ValueError(v)
+    return n
 
 
 def stages_from(args):
@@ -192,6 +201,7 @@ def run_stages(ctx, stages):
 
     blocked = args.fail_fast and bool(rec.failing())
     heavy = [("rdma", lambda: rdma.run_bandwidth(ctx)), ("dcgm", lambda: dcgm.run(ctx, args.dcgm_level)),
+             ("burnin", lambda: burnin.run(ctx, args.burnin_minutes)),
              ("nccl", lambda: nccl.run(ctx)), ("fio", lambda: fio.run(ctx))]
     for name, fn in heavy:
         if name not in stages:
@@ -221,17 +231,23 @@ PLAN = {
                 "apt-get install datacenter-gpu-manager-4-cuda<driver CUDA major> (if dcgmi missing)",
                 "apt-get download libnccl2/libnccl-dev=<nccl>+cuda<driver CUDA> ; dpkg-deb -x into <tools-dir>",
                 "git fetch nccl-tests@<pinned commit> ; make NCCL_HOME=<tools-dir>/nccl-..."],
-    "inventory": ["nvidia-smi --query-gpu=...", "/proc/cmdline, /sys/devices/system/node", "mokutil --sb-state",
+    "inventory": ["nvidia-smi --query-gpu=...", "nvidia-smi --query-gpu=index,enforced.power.limit",
+                  "/proc/cmdline, /sys/devices/system/node", "mokutil --sb-state",
                   "lspci -D -vvv (ACS on bridges above GPUs)", "/proc/modules (nvidia_peermem)", "ofed_info -s",
                   "/sys/class/dmi/id/bios_version, /sys/class/infiniband/*/fw_ver"],
     "nvlink": ["nvidia-smi nvlink -s", "nvidia-smi -q (Fabric state)", "lspci -nn -d 10de:",
                "systemctl is-active nvidia-fabricmanager ; dpkg-query nvidia-fabricmanager*", "dcgmi discovery -l"],
     "rdma": ["/sys/class/infiniband/*/ports/*", "nvidia-smi topo -m (rail map)",
-             "ib_write_bw -d <rail k> ... 127.0.0.1 <- rail k+1 (ring, 5 s each)",
-             "ib_write_bw --use_cuda=<rail GPU> (if perftest has CUDA)"],
+             "taskset -c <NIC-local CPUs> ib_write_bw -d <rail k> ... 127.0.0.1 <- rail k+1 (ring, 5 s each)",
+             "ib_write_bw --use_cuda=<rail GPU> --use_cuda_dmabuf, else the peermem path (if perftest has CUDA)"],
     "health": ["before and after the load: nvidia-smi ECC + remapped rows, dmesg XIDs, IB counters, "
                "nvidia-smi nvlink -e"],
     "dcgm": ["dcgmi diag -r <level> -j (starts nv-hostengine only if none is running)"],
+    "burnin": ["dcgmi dmon -e 152,158,159,151 -c 1 (GPU temperature limits)",
+               "dcgmi diag -r targeted_power -p targeted_power.test_duration=<burnin.minutes*60> -j",
+               "dcgmi dmon -e 150,140,155,100 -d 5000 alongside (temperatures, power, SM clock)",
+               "nvidia-smi --query-gpu=index,clocks_event_reasons_counters.* before and after (throttling)",
+               "skipped when the manifest has no [burnin] table"],
     "nccl": ["all_reduce_perf -b 8 -e 8G -f 2 -g <gpus> -n 20 -w 5"],
     "fio": ["fio seq write + read in [storage].path (only if the manifest has [storage])"],
 }
@@ -244,6 +260,10 @@ def print_plan(cls, spec, source, stages, args):
           f"NCCL {spec.get('nccl', '-')}, {spec['nvlinks_total']} NVLinks, {spec['nvswitches']} NVSwitches, "
           f"{spec['rdma_nics']}x {spec.get('rdma_link_layer', 'InfiniBand')} @ {spec['rdma_rate_gbps']} Gb/s")
     print("  floors " + (", ".join(f"{k}={v}" for k, v in perf.items()) or "none"))
+    if spec.get("gpu_power_limit_w") or spec.get("thermal") or spec.get("burnin"):
+        print(f"  power limit {spec.get('gpu_power_limit_w', '-')} W, thermal "
+              + (", ".join(f"{k}={v}" for k, v in (spec.get("thermal") or {}).items()) or "-")
+              + ", burn-in " + (", ".join(f"{k}={v}" for k, v in (spec.get("burnin") or {}).items()) or "none"))
     print(f"tools dir {args.tools_dir} (install {'off' if args.no_install else 'on'}), "
           f"evidence {args.out or DEFAULT_OUT + '/<run_id>'}, DCGM level {args.dcgm_level}")
     print("prereq: root ; nvidia-smi ; nvidia-smi --query-compute-apps (GPUs must be idle unless --force)")

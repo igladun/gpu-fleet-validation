@@ -1,0 +1,10 @@
+#Entity         GGMOT        SDTMP        SHTMP        GMMOT        
+ID              C            C            C            C            
+GPU 0           87           89           95           95           
+GPU 1           87           89           95           95           
+GPU 2           87           89           95           95           
+GPU 3           87           89           95           95           
+GPU 4           87           89           95           95           
+GPU 5           87           89           95           95           
+GPU 6           87           89           95           95           
+GPU 7           87           89           95           95           

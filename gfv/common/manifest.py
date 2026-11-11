@@ -13,9 +13,9 @@ REQUIRED = {
     "nvswitches": int, "rdma_nics": int, "rdma_rate_gbps": int, "numa_nodes": int,
 }
 OPTIONAL = {
-    "cuda": str, "nccl": str, "nvswitch_pci_device": str, "rdma_link_layer": str,
+    "cuda": str, "nccl": str, "nvswitch_pci_device": str, "rdma_link_layer": str, "gpu_power_limit_w": int,
 }
-TABLES = ("k8s", "host", "firmware", "perf", "storage")
+TABLES = ("k8s", "host", "firmware", "perf", "storage", "thermal", "burnin")
 
 
 class ManifestError(Exception):
@@ -109,11 +109,17 @@ def _str_list(v):
 
 
 # Keys of the tables L2 reads. A typo must not silently turn a check off.
-PERF = {"nccl_allreduce_busbw_gbs_1node", "rdma_write_bw_gbps", "dcgm_pcie_bidir_gbs"}
+PERF = {"nccl_allreduce_busbw_gbs_1node", "rdma_write_bw_gbps", "dcgm_pcie_bidir_gbs", "dcgm_pcie_oneway_gbs"}
 HOST = {"kernel_cmdline_contains": _str_list, "pcie_acs": lambda v: v in ("disabled", "enabled"),
         "secure_boot": lambda v: isinstance(v, bool), "nvidia_peermem": lambda v: isinstance(v, bool),
+        "gpudirect": lambda v: isinstance(v, bool),
         "power_profile": lambda v: isinstance(v, str)}
 FIRMWARE = {"bios", "bmc", "nic", "gpu_vbios"}
+# GPU temperature limits as the GPU reports them (degrees C); a mismatch means another SKU or VBIOS.
+THERMAL = {"gpu_max_operating_c", "gpu_slowdown_c", "gpu_shutdown_c", "mem_max_operating_c"}
+BURNIN = {"minutes": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 0,
+          "power_min_w": _num, "gpu_temp_warn_c": _num, "gpu_temp_max_c": _num, "mem_temp_max_c": _num,
+          "gpu_temp_spread_c": _num}
 STORAGE = {"path": lambda v: isinstance(v, str) and v.startswith("/"),
            "size_gib": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 0,
            "seq_write_gbs": _num, "seq_read_gbs": _num}
@@ -129,7 +135,7 @@ def validate(cls, spec):
         elif not isinstance(spec[key], typ) or isinstance(spec[key], bool):
             problems.append(f"{key} must be {typ.__name__}")
     for key, typ in OPTIONAL.items():
-        if key in spec and not isinstance(spec[key], typ):
+        if key in spec and (not isinstance(spec[key], typ) or isinstance(spec[key], bool)):
             problems.append(f"{key} must be {typ.__name__}")
     unknown = sorted(set(spec) - set(REQUIRED) - set(OPTIONAL) - set(TABLES))
     if unknown:
@@ -156,6 +162,16 @@ def validate(cls, spec):
             problems.append(f"unknown firmware.{k}")
         elif not _str_list(v):
             problems.append(f"firmware.{k} must be a list of strings")
+    for k, v in table("thermal").items():
+        if k not in THERMAL:
+            problems.append(f"unknown thermal.{k} (known: {', '.join(sorted(THERMAL))})")
+        elif not _num(v):
+            problems.append(f"thermal.{k} must be a number")
+    for k, v in table("burnin").items():
+        if k not in BURNIN:
+            problems.append(f"unknown burnin.{k} (known: {', '.join(sorted(BURNIN))})")
+        elif not BURNIN[k](v):
+            problems.append(f"burnin.{k} has an invalid value {v!r}")
     storage = table("storage") if "storage" in spec else None
     if storage is not None:
         if "path" not in storage:

@@ -46,7 +46,12 @@ Scrub applied to every recorded or derived file:
 | `mokutil.txt` | synthetic | `mokutil --sb-state` |
 | `ofed-info.txt` | synthetic | `ofed_info -s` |
 | `ib-write-bw-help.txt` | synthetic | perftest help text without `--use_cuda` (no GPUDirect build) |
+| `nvidia-smi-r615.txt` | recorded | plain `nvidia-smi` banner from a second 8x H100 node on driver 615 (`KMD Version` / `CUDA UMD Version`), cut to the first GPU row |
+| `power-limit.csv` | synthetic | `--query-gpu=index,enforced.power.limit`, 700 W on every GPU |
+| `throttle.csv` | synthetic | `--query-gpu=index,clocks_event_reasons_counters.*` (us): no thermal slowdown, one boot-time power-brake count as seen on a real node |
+| `dcgmi-dmon-limits.txt` | synthetic | `dcgmi dmon -e 152,158,159,151 -c 1` in the recorded dmon layout: 87 / 89 / 95 / 95 C |
 
 Also in this directory:
-- `manifest-hgx-h100-8x.json` is a JSON copy of `manifests/hgx-h100-8x.toml`. The Python 3.10 tests use it because 3.10 has no TOML parser. A test checks that the copy matches the TOML.
+- `manifest-reference.json` is the manifest of the node these fixtures were recorded on (driver 580.178.04, CUDA 13.0, 2 NUMA nodes). It is JSON so the Python 3.10 tests can read it. The shipped `manifests/hgx-h100-8x.toml` has since moved to a newer reference node, so the two differ on purpose.
+- The burn-in telemetry (`dcgmi-dmon-burnin.txt`) is written by the tests themselves, so each test controls the temperature curve.
 - `install/apt-madison.txt` holds the `libnccl2` versions published in the NVIDIA CUDA apt repo for Ubuntu 24.04, in `apt-cache madison` format.

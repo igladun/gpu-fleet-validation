@@ -39,6 +39,27 @@ class TestParse(unittest.TestCase):
     def test_smi_header(self):
         self.assertEqual(parse.smi_header(read("nvidia-smi.txt")), {"driver": "580.178.04", "cuda": "13.0"})
 
+    def test_smi_header_r615(self):
+        """Driver 615 renamed the banner fields: KMD Version / CUDA UMD Version."""
+        self.assertEqual(parse.smi_header(read("nvidia-smi-r615.txt")), {"driver": "615.71.10", "cuda": "13.4"})
+        self.assertEqual(parse.smi_header("no banner"), {"driver": None, "cuda": None})
+
+    def test_gpu_values(self):
+        self.assertEqual(parse.gpu_values(read("power-limit.csv"))[7], [700.0])
+        self.assertEqual(parse.gpu_values("0, [N/A], 5\nheader, x\n"), {0: [None, 5.0]})
+
+    def test_dcgmi_dmon(self):
+        data = parse.dcgmi_dmon(read("dcgmi-dmon-limits.txt"), [152, 158, 159, 151])
+        self.assertEqual(sorted(data), list(range(8)))
+        self.assertEqual(data[3], [{152: 87.0, 158: 89.0, 159: 95.0, 151: 95.0}])
+        text = "#Entity TMPTR MMTMP\nID C C\nGPU 0 40 N/A\nGPU 0 41 48\n#Entity TMPTR MMTMP\nGPU 1 39\n"
+        self.assertEqual(parse.dcgmi_dmon(text, [150, 140]), {0: [{150: 40.0, 140: None}, {150: 41.0, 140: 48.0}]})
+
+    def test_dcgm_pcie_directions(self):
+        rows, _, _ = parse.dcgm_diag(read("dcgm-diag-r3.json"))
+        gpu0 = next(r for r in rows if r["test"] == "pcie" and r["entity"] == 0)
+        self.assertEqual(parse.dcgm_pcie(gpu0["info"]), {"bidir": 76.08, "gpu_to_host": 55.21, "host_to_gpu": 55.1})
+
     def test_topo_rail_map(self):
         tp = parse.topo(read("topo.txt"))
         self.assertEqual(tp["nics"]["NIC0"], "mlx5_ib0")
@@ -161,7 +182,7 @@ class TestParse(unittest.TestCase):
         self.assertEqual(missing, [], "document the provenance of every fixture in tests/fixtures/README.md")
 
     def test_manifest_json_copy(self):
-        doc = json.loads(read("manifest-hgx-h100-8x.json", FIXTURES))
+        doc = json.loads(read("manifest-reference.json", FIXTURES))
         self.assertIn("hgx-h100-8x", doc["class"])
 
 

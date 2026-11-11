@@ -12,7 +12,7 @@ REPO = os.path.dirname(TESTS)
 FIXTURES = os.path.join(TESTS, "fixtures")
 REFERENCE = os.path.join(FIXTURES, "h100-8x-ib")
 FAKEBIN = os.path.join(TESTS, "fakebin")
-MANIFEST_JSON = os.path.join(FIXTURES, "manifest-hgx-h100-8x.json")
+MANIFEST_JSON = os.path.join(FIXTURES, "manifest-reference.json")
 
 if REPO not in sys.path:
     sys.path.insert(0, REPO)

@@ -3,7 +3,7 @@
 import json
 import pkgutil
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def package_data(name):

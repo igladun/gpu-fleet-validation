@@ -82,10 +82,22 @@ def as_int(v):
 
 
 def smi_header(text):
-    """Driver and CUDA version from the plain `nvidia-smi` banner."""
-    drv = re.search(r"Driver Version:\s*([0-9.]+)", text or "")
-    cuda = re.search(r"CUDA Version:\s*([0-9.]+)", text or "")
+    """Driver and CUDA version from the plain `nvidia-smi` banner.
+    R580: `Driver Version: 580.178.04  CUDA Version: 13.0`; R615: `KMD Version: 615.71.10  CUDA UMD Version: 13.4`."""
+    drv = re.search(r"(?:Driver|KMD) Version:\s*([0-9.]+)", text or "")
+    cuda = re.search(r"CUDA (?:UMD )?Version:\s*([0-9.]+)", text or "")
     return {"driver": drv.group(1) if drv else None, "cuda": cuda.group(1) if cuda else None}
+
+
+def gpu_values(text):
+    """`nvidia-smi --query-gpu=index,<field>... --format=csv,noheader,nounits` -> {index: [float or None, ...]}"""
+    out = {}
+    for line in (text or "").splitlines():
+        rec = [x.strip() for x in line.split(",")]
+        if len(rec) < 2 or not rec[0].isdigit():
+            continue
+        out[int(rec[0])] = [_f(v) for v in rec[1:]]
+    return out
 
 
 def topo(text):
@@ -226,11 +238,37 @@ def dcgm_verdict(status):
 
 
 def dcgm_pcie_bidir(info_lines):
+    return dcgm_pcie(info_lines)["bidir"]
+
+
+PCIE_LINES = {"bidir": "bidirectional bandwidth", "gpu_to_host": "GPU to Host bandwidth",
+              "host_to_gpu": "Host to GPU bandwidth"}
+
+
+def dcgm_pcie(info_lines):
+    """DCGM pcie plugin info lines -> {"bidir", "gpu_to_host", "host_to_gpu"} in GB/s (None if absent)."""
+    out = dict.fromkeys(PCIE_LINES)
     for line in info_lines:
-        m = re.match(r"^\s*bidirectional bandwidth:\s*([0-9.]+)\s*GB/s", line)
-        if m:
-            return float(m.group(1))
-    return None
+        for key, label in PCIE_LINES.items():
+            m = re.match(r"^\s*" + re.escape(label) + r":\s*([0-9.]+)\s*GB/s", line)
+            if m:
+                out[key] = float(m.group(1))
+    return out
+
+
+def dcgmi_dmon(text, fields):
+    """`dcgmi dmon -e <fields>` -> {gpu index: [{field id: float or None}, ...]} in sample order.
+    Columns follow the -e order; a value of N/A (or anything non-numeric) is None."""
+    out = {}
+    for line in (text or "").splitlines():
+        rec = line.split()
+        if len(rec) < 2 or rec[0] != "GPU" or not rec[1].isdigit():
+            continue
+        vals = rec[2:]
+        if len(vals) != len(fields):
+            continue
+        out.setdefault(int(rec[1]), []).append({f: _f(v) for f, v in zip(fields, vals)})
+    return out
 
 
 def nccl_version(code):

@@ -2,13 +2,14 @@
 # Expected values live here, never in test code. Floors = healthy reference minus margin;
 # re-measure them on your own first healthy nodes and never copy floors between classes.
 # Keys documented in docs/acceptance.md. Sections a tier does not read are ignored by it.
+# Reference node: 8x H100 SXM HGX, 2x Xeon 8480+, Ubuntu 26.04, driver 615 (open kernel module), 8x NDR IB.
 
 [class."hgx-h100-8x"]
 gpus = 8
 gpu_name = "NVIDIA H100 80GB HBM3"
-driver = "580.178.04"
-cuda = "13.0"                    # CUDA version reported by the driver (nvidia-smi header)
-nccl = "2.28.9"                  # NCCL used by the acceptance nccl-tests build (must exist for the driver's CUDA)
+driver = "615.71.10"
+cuda = "13.4"                    # CUDA version reported by the driver (nvidia-smi header)
+nccl = "2.32.3"                  # NCCL used by the acceptance nccl-tests build (must exist for the driver's CUDA)
 pcie_width = 16
 nvlinks_total = 144              # 8 GPUs x 18
 nvswitches = 4                   # counted on the PCI bus; DCGM reports 0 if libnvidia-nscq is missing
@@ -16,7 +17,8 @@ nvswitch_pci_device = "22a3"     # PCI device ID of the NVSwitch generation (H10
 rdma_nics = 8                    # one per GPU, rail-aligned
 rdma_rate_gbps = 400
 rdma_link_layer = "InfiniBand"   # RoCE classes: "Ethernet" (RDMA bandwidth check is skipped in v1)
-numa_nodes = 2
+numa_nodes = 4                   # 2 sockets with sub-NUMA clustering (SNC2) on
+gpu_power_limit_w = 700          # enforced power limit of every GPU; lower = someone capped it
 
 [class."hgx-h100-8x".k8s]        # read by the in-cluster tiers, not by host-mode L2
 gpu_resource = "nvidia.com/gpu"
@@ -27,11 +29,12 @@ topology_manager_scope = "pod"
 min_dev_shm_gib = 16
 
 [class."hgx-h100-8x".host]
-kernel_cmdline_contains = ["iommu=pt"]
+kernel_cmdline_contains = []     # the reference node boots with IOMMU in translated mode (no iommu=pt)
 pcie_acs = "disabled"            # GPUDirect P2P / RDMA across PCIe switches
 power_profile = "performance"    # BIOS attribute; needs BMC/Redfish, reported as skip by host-mode L2
-secure_boot = true
-nvidia_peermem = true            # GPUDirect RDMA kernel module loaded
+secure_boot = false
+gpudirect = true                 # rdma.gdr_write_bw must run and work (DMA-BUF or peermem); needs a CUDA-enabled perftest
+# nvidia_peermem is not required: with the open kernel module, GPUDirect works over DMA-BUF
 
 [class."hgx-h100-8x".firmware]   # allowlists; an empty list records the value without enforcing it
 bios = []
@@ -39,10 +42,25 @@ bmc = []                         # needs BMC/Redfish, reported as skip by host-m
 nic = []
 gpu_vbios = []
 
+[class."hgx-h100-8x".thermal]    # the GPU's own limits in degrees C, as DCGM reports them (fields 152/158/159/151)
+gpu_max_operating_c = 87         # rated ceiling for continuous work
+gpu_slowdown_c = 89              # the hardware throttles clocks
+gpu_shutdown_c = 95              # the GPU powers off
+mem_max_operating_c = 95         # HBM3
+
+[class."hgx-h100-8x".burnin]     # every GPU at its power limit (DCGM targeted_power), telemetry every 5 s
+minutes = 30                     # long enough to reach steady state; use --burnin-minutes for a longer soak
+power_min_w = 665                # median draw per GPU after ramp-up (95 % of 700 W)
+gpu_temp_warn_c = 77             # 10 C under the max operating temperature
+gpu_temp_max_c = 82              # 5 C under the max operating temperature; above = fail
+mem_temp_max_c = 85              # 10 C under the HBM max operating temperature
+gpu_temp_spread_c = 15           # hottest minus coolest GPU at steady state; above = warn (fan or heatsink zone)
+
 [class."hgx-h100-8x".perf]       # floors = healthy reference minus margin
-nccl_allreduce_busbw_gbs_1node = 455   # measured 478.6 @ 8 GiB with NVLS
-rdma_write_bw_gbps = 350               # measured 365-368 loopback, single QP, 64 KiB
-dcgm_pcie_bidir_gbs = 95               # measured ~101 on 6 of 8 GPUs, 76 on the other two
+nccl_allreduce_busbw_gbs_1node = 455   # measured 478.6 @ 8 GiB with NVLS on the previous reference node
+rdma_write_bw_gbps = 350               # measured 365-368 loopback, single QP, 64 KiB (previous node)
+dcgm_pcie_oneway_gbs = 50              # measured 53-55 per direction on every GPU
+dcgm_pcie_bidir_gbs = 65               # measured 67-90 (host-side limit); below = warn while one-way passes
 
 # Optional local-storage check (fio). Uncomment and point at a scratch filesystem.
 # [class."hgx-h100-8x".storage]

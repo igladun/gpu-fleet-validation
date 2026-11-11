@@ -223,8 +223,12 @@ class Installer:
         versions = [p.split("|")[1].strip() for p in mad.out.splitlines() if p.count("|") >= 2]
         pick = pick_nccl(versions, nccl_want, cuda)
         if not pick:
+            major = cuda.split(".")[0]
+            same_major = [v for v in versions if f"+cuda{major}." in v]
             self.ctx.add("install.nccl", "error", None, None, f"{nccl_want or 'any'} for CUDA {cuda}",
-                         f"no libnccl2 build in the apt repo (found {len(versions)} versions)")
+                         f"no matching libnccl2 build in the apt repo; for CUDA {major}.x it has: "
+                         f"{', '.join(same_major) or 'none'} (set `nccl` in the manifest to one of them)",
+                         evidence=f"raw/{mad.name}.out")
             return None
         safe = re.sub(r"[^A-Za-z0-9.]+", "_", pick)
         tests_dir = os.path.join(self.tools_dir, f"nccl-tests-{lock['commit'][:12]}-nccl-{safe}")
@@ -419,13 +423,19 @@ def run(ctx, tools_dir, nccl_needed=True, fetch=_fetch, machine=None):
         if not inst.supported():
             return inst
         cuda = ctx.facts.get("cuda") or ""
+        if not cuda:
+            ctx.add("install.cuda_version", "error", None, None, "CUDA version from nvidia-smi",
+                    "could not read the driver's CUDA version; DCGM and NCCL builds depend on it",
+                    evidence="raw/nvidia-smi.out")
+            nccl_needed = False
         inst.ensure_ca()
         # Add the CUDA repo before the first apt-get update when anything will come from it.
-        if not ctx.which("dcgmi") or (nccl_needed and not inst.existing_build(cuda, ctx.spec.get("nccl"))):
+        if (cuda and not ctx.which("dcgmi")) or (nccl_needed and not inst.existing_build(cuda, ctx.spec.get("nccl"))):
             inst.ensure_cuda_repo()
         try:
             inst.apt_tools()
-            inst.dcgm(cuda.split(".")[0])
+            if cuda or ctx.which("dcgmi"):
+                inst.dcgm(cuda.split(".")[0])
             if nccl_needed:
                 caps = {g["compute_cap"].replace(".", "") for g in ctx.facts.get("gpus", [])
                         if re.match(r"^\d+\.\d+$", g.get("compute_cap", ""))}

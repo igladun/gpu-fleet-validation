@@ -31,10 +31,11 @@ From a repo checkout, `sudo python3 -m gfv accept …` is the same thing. A chec
 | `--no-install` | Install nothing. A missing tool makes its checks `error` |
 | `--tools-dir DIR` | Where NCCL and nccl-tests are unpacked and built. Default `/opt/gpu-fleet-validation/tools` |
 | `--out DIR` | Evidence directory. Default `/var/lib/gpu-fleet-validation/runs/<run_id>` |
-| `--only` / `--skip LIST` | Stages: `install,inventory,nvlink,rdma,health,dcgm,nccl,fio` |
+| `--only` / `--skip LIST` | Stages: `install,inventory,nvlink,rdma,health,dcgm,burnin,nccl,fio` |
 | `--dcgm-level N` | `dcgmi diag` level: 1 quick, 2 medium, 3 full (default, about 25 min), 4 extended (hours) |
+| `--burnin-minutes N` | Burn-in length at the power limit. Default: the manifest's `burnin.minutes` (30 for `hgx-h100-8x`). Use 240 or more for a first intake soak |
 | `--force` | Run although GPU processes are running. DCGM and NCCL results are then unreliable |
-| `--fail-fast` | Skip the heavy stages (RDMA bandwidth, DCGM, NCCL, fio) once a cheap check has failed |
+| `--fail-fast` | Skip the heavy stages (RDMA bandwidth, DCGM, burn-in, NCCL, fio) once a cheap check has failed |
 | `--allow-partial` | Let a run with `--only` or `--skip` pass. Without it, a partial run fails (`run.partial`) so it can never certify a node. To pre-stage tools, e.g. in an image bake: `--only install --allow-partial` |
 | `--node`, `--cluster`, `--rack`, `--leaf` | Labels copied into every result line |
 
@@ -63,7 +64,7 @@ The stages run in this order. `prereq` always runs.
 |---|---|---|---|
 | prereq | `prereq.nvidia_smi` | the driver answers | – |
 | prereq | `prereq.gpus_idle` | the process list can be read and is empty (exit 2 otherwise) | – |
-| install | `install.*` | tools present or installed (see below) | `nccl` |
+| install | `install.*` | tools present or installed (see below). `install.cuda_version` is `error` when the driver's CUDA version cannot be read; DCGM and NCCL installs depend on it | `nccl` |
 | health (before) | `health.ecc_uncorrected` | volatile uncorrectable ECC = 0 on all GPUs (aggregate > 0 is `warn`); unreadable counters or a short GPU list are `error` | `gpus` |
 | health (before) | `health.remapped_rows` | no row remap pending or failed | – |
 | health (before) | `health.xid` | no XID since boot. Only application XIDs 13, 31, 43, 45 are `warn`; every other XID fails | – |
@@ -71,7 +72,8 @@ The stages run in this order. `prereq` always runs.
 | health (before) | `health.ib_counter` | a saturated error counter (e.g. `symbol_error` 65535) fails, because new errors can no longer be seen; other non-zero counters are `warn` | – |
 | health (before) | `health.ib_counters_readable`, `health.nvlink_counters_readable` | every rail exposes its error counters, and `nvidia-smi nvlink -e` reports every link | `nvlinks_total` |
 | inventory | `inventory.gpu_count`, `.gpu_name` | count and model match | `gpus`, `gpu_name` |
-| inventory | `inventory.driver`, `.cuda` | driver version and the CUDA version the driver reports match | `driver`, `cuda` |
+| inventory | `inventory.driver`, `.cuda` | driver version and the CUDA version the driver reports match. Both banner layouts are read: `Driver Version` / `CUDA Version` (up to R580) and `KMD Version` / `CUDA UMD Version` (R615). The driver falls back to `--query-gpu=driver_version`. A value that cannot be read is `error` | `driver`, `cuda` |
+| inventory | `inventory.power_limit` | every GPU's enforced power limit equals the class value. A lower value means someone capped the GPU | `gpu_power_limit_w` |
 | inventory | `inventory.mig` | MIG off. Persistence mode off is `warn` | – |
 | inventory | `inventory.ecc_mode` | ECC enabled on every GPU | – |
 | inventory | `inventory.pcie_width` | every GPU and RDMA NIC runs at its max width and at the manifest width | `pcie_width` |
@@ -79,20 +81,30 @@ The stages run in this order. `prereq` always runs.
 | inventory | `inventory.kernel_cmdline` | each listed string appears in `/proc/cmdline` | `host.kernel_cmdline_contains` |
 | inventory | `inventory.secure_boot` | `mokutil --sb-state` matches | `host.secure_boot` |
 | inventory | `inventory.pcie_acs` | ACS P2P redirect (`ReqRedir`/`CmpltRedir`) on the PCIe switch ports above each GPU and each RDMA NIC matches. Root ports are not checked. No checkable port at all is `error` | `host.pcie_acs` |
-| inventory | `inventory.nvidia_peermem` | the GPUDirect RDMA module is loaded | `host.nvidia_peermem` |
+| inventory | `inventory.nvidia_peermem` | with `host.nvidia_peermem` set: the module state matches. Without it the state is recorded as `info`; set `host.gpudirect = true` to require a working GPUDirect test instead | `host.nvidia_peermem` |
 | inventory | `inventory.firmware.{bios,gpu_vbios,nic}` | the value is in the allowlist; an empty list only records it (`info`) | `firmware.*` |
 | inventory | `inventory.power_profile`, `.firmware.bmc` | `skip`: needs BMC/Redfish (later tier) | – |
 | nvlink | `nvlink.links_total` | active links = expected; per-GPU inactive links fail | `nvlinks_total` |
 | nvlink | `nvlink.fabric_state` | every GPU reports Fabric `Completed/Success` | `nvswitches` > 0 |
-| nvlink | `nvlink.fabricmanager_active`, `_version` | service active, package version = driver version | `nvswitches` > 0 |
+| nvlink | `nvlink.fabricmanager_active`, `_version` | service active, package version = driver version. An installed package on hold (`hi`) counts | `nvswitches` > 0 |
 | nvlink | `nvlink.nvswitch_count` | NVSwitches on the PCI bus = expected | `nvswitches`, `nvswitch_pci_device` |
 | nvlink | `nvlink.dcgm_nvswitch_visible` | `warn` when DCGM sees 0 NVSwitches. libnvidia-nscq is missing, so DCGM's NVSwitch health checks are blind | – |
 | rdma | `rdma.nic_count`, `rdma.port` | RDMA devices with the expected link layer are ACTIVE / LinkUp at the expected rate | `rdma_nics`, `rdma_link_layer`, `rdma_rate_gbps` |
 | rdma | `rdma.rail_map` | every GPU has its own NIC at PIX/PXB distance (`nvidia-smi topo -m`); a matrix missing GPUs is `error` | `gpus` |
-| rdma | `rdma.write_bw` | `ib_write_bw` loopback through the switch in a ring (rail k → k+1, 5 s, 64 KiB, single QP) ≥ floor | `perf.rdma_write_bw_gbps` |
-| rdma | `rdma.gdr_write_bw` | the same with `--use_cuda` on the rail-local GPUs. Advisory in v1: below the floor is `warn`; `skip` if perftest has no CUDA support | `perf.rdma_write_bw_gbps` |
+| rdma | `rdma.write_bw` | `ib_write_bw` loopback through the switch in a ring (rail k → k+1, 5 s, 64 KiB, single QP) ≥ floor. Server and client run under `taskset` on each NIC's local CPUs (`/sys/class/infiniband/<dev>/device/local_cpulist`), so their buffers sit on the NIC's NUMA node; `detail` says whether the pair was pinned | `perf.rdma_write_bw_gbps` |
+| rdma | `rdma.gdr_write_bw` | the same with `--use_cuda` on the rail-local GPUs. DMA-BUF (`--use_cuda_dmabuf`, open kernel module) is tried first, then the nvidia-peermem path; the first path that works is used for the remaining pairs and named in `detail`. GPU memory that no path can register is `error`. Below the floor is `warn` until a floor is measured. Without CUDA support in perftest (Ubuntu's own perftest has none; DOCA/MLNX_OFED perftest has) the check is `skip`, or `error` when `host.gpudirect = true` | `perf.rdma_write_bw_gbps`, `host.gpudirect` |
 | dcgm | `dcgm.diag` | every test passes on every GPU. Each test's summary must not be Fail. Each test must cover all GPUs. At level 3+ the tests software, memory, diagnostic, nvbandwidth, pcie, targeted_stress and targeted_power must all run (a missing one, or Skip, is `error`). A non-zero `dcgmi` exit with nothing failing in the JSON is `error`. DCGM 4.x is required | `gpus` |
-| dcgm | `dcgm.pcie_bidir` | per-GPU bidirectional PCIe bandwidth (from DCGM's pcie plugin) ≥ floor | `perf.dcgm_pcie_bidir_gbs` |
+| dcgm | `dcgm.pcie_oneway` | per-GPU PCIe bandwidth in each direction (GPU to host, host to GPU) ≥ floor. This is the link-health gate: a healthy Gen5 x16 link sits near 55 GB/s each way | `perf.dcgm_pcie_oneway_gbs` |
+| dcgm | `dcgm.pcie_bidir` | per-GPU bidirectional PCIe bandwidth ≥ floor. Bidirectional also depends on the host (IOMMU mode, NUMA layout, root complex), so below the floor it is `warn` when that GPU's one-way check passes, and `fail` otherwise (or when no one-way floor is set) | `perf.dcgm_pcie_bidir_gbs` |
+| burnin | `burnin.limits` | every GPU reports its temperature limits (DCGM fields 152, 158, 159, 151) and they equal the manifest's; a mismatch means another SKU or VBIOS. A limit the manifest sets but a GPU does not report is `error` | `thermal.*` |
+| burnin | `burnin.dcgm` | `dcgmi diag -r targeted_power` held for `burnin.minutes` passes on every GPU | `burnin.minutes` |
+| burnin | `burnin.telemetry` | per GPU, the samples under load (power ≥ 80 % of `gpu_power_limit_w`) cover ≥ 90 % of the requested minutes. Less means the load or the monitor stopped early: `error` | `burnin.minutes` |
+| burnin | `burnin.gpu_temp` | per GPU, the hottest reading ≤ `gpu_temp_max_c` (`fail` above); above `gpu_temp_warn_c` is `warn`. `detail` gives the margin to the max operating temperature | `burnin.gpu_temp_max_c`, `.gpu_temp_warn_c` |
+| burnin | `burnin.mem_temp` | per GPU, the hottest HBM reading ≤ `mem_temp_max_c` | `burnin.mem_temp_max_c` |
+| burnin | `burnin.power` | per GPU, the median power under load after ramp-up ≥ `power_min_w` | `burnin.power_min_w` |
+| burnin | `burnin.temp_spread` | hottest minus coolest GPU (median of the last 5 min) ≤ `gpu_temp_spread_c`, else `warn`: one GPU much hotter than its neighbours points at a fan or heatsink zone | `burnin.gpu_temp_spread_c` |
+| burnin | `burnin.steady_state` | no GPU still warming faster than 0.5 °C/min over the last 5 min under load, else `warn` (extend the burn-in). The cool-down after the load is left out. Runs shorter than 10 min record `info` | – |
+| burnin | `burnin.throttle` | the thermal-slowdown and power-brake counters (`nvidia-smi … clocks_event_reasons_counters.*`) did not grow during the burn-in. Counters that cannot be read or are `N/A` are `error` | – |
 | nccl | `nccl.correctness` | 0 wrong values, `Out of bounds values : 0 OK`, rc 0 | – |
 | nccl | `nccl.allreduce_busbw` | out-of-place bus bandwidth at 8 GiB ≥ floor; a log that stops before 8 GiB is `error` | `perf.nccl_allreduce_busbw_gbs_1node` |
 | nccl | `nccl.version` | the NCCL library version nccl-tests ran with matches | `nccl` |
@@ -132,7 +144,7 @@ The install stage is on by default. It is idempotent and installs test tooling o
 
 `installed.json` in the evidence directory lists what the run installed. `raw/commands.log` and `raw/install-*.out` hold every install command and its output.
 
-The automatic install supports Ubuntu (22.04, 24.04) on x86_64 and arm64 (sbsa). On anything else, install the tools yourself and pass `--no-install`.
+The automatic install supports Ubuntu (22.04, 24.04, 26.04) on x86_64 and arm64 (sbsa). On anything else, install the tools yourself and pass `--no-install`.
 
 ## Results
 
@@ -182,13 +194,43 @@ A manifest describes one node class. See [`manifests/hgx-h100-8x.toml`](../manif
 | `nvlinks_total`, `nvswitches`, `nvswitch_pci_device` | int, int, str | NVLink count, NVSwitch count, NVSwitch PCI device ID |
 | `rdma_nics`, `rdma_rate_gbps`, `rdma_link_layer` | int, int, str | rails, port rate, `InfiniBand` or `Ethernet` |
 | `numa_nodes` | int | NUMA node count |
-| `[host]` | table | `kernel_cmdline_contains` (list), `pcie_acs` (`disabled`/`enabled`), `secure_boot` (bool), `nvidia_peermem` (bool), `power_profile` (reported as skip) |
+| `gpu_power_limit_w` | int | enforced power limit of every GPU in W (optional) |
+| `[host]` | table | `kernel_cmdline_contains` (list), `pcie_acs` (`disabled`/`enabled`), `secure_boot` (bool), `nvidia_peermem` (bool, optional), `gpudirect` (bool, optional: the GPUDirect RDMA test must run and work), `power_profile` (reported as skip) |
 | `[firmware]` | table of lists | `bios`, `gpu_vbios`, `nic` allowlists; `bmc` is reported as skip |
-| `[perf]` | table of numbers | `nccl_allreduce_busbw_gbs_1node`, `rdma_write_bw_gbps`, `dcgm_pcie_bidir_gbs` |
+| `[thermal]` | table of numbers | the GPU's own limits in °C: `gpu_max_operating_c`, `gpu_slowdown_c`, `gpu_shutdown_c`, `mem_max_operating_c` |
+| `[burnin]` | table | `minutes` (int), and thresholds `power_min_w`, `gpu_temp_warn_c`, `gpu_temp_max_c`, `mem_temp_max_c`, `gpu_temp_spread_c`. A value a threshold needs but the GPU does not report is `error`; leave the threshold out to skip that check. Without the table the burn-in stage is skipped, and `--burnin-minutes` is an `error` |
+| `[perf]` | table of numbers | `nccl_allreduce_busbw_gbs_1node`, `rdma_write_bw_gbps`, `dcgm_pcie_oneway_gbs`, `dcgm_pcie_bidir_gbs` |
 | `[storage]` | table | `path` (required), `size_gib`, `seq_write_gbs`, `seq_read_gbs` |
 | `[k8s]` | table | for the in-cluster tiers; L2 ignores it |
 
-Re-measure the floors on the first healthy nodes of each class. Never copy floors between classes.
+Re-measure the floors on the first healthy nodes of each class. Never copy floors between classes. The README has a step-by-step guide: [Add a manifest for your node class](../README.md#add-a-manifest-for-your-node-class).
+
+## Burn-in and temperatures
+
+DCGM level 3 already drives every GPU to its power limit, but only for a couple of minutes per test, so temperatures are still climbing when it stops. The `burnin` stage holds the limit long enough to reach steady state. It runs `dcgmi diag -r targeted_power` for `burnin.minutes`, samples temperatures, power and SM clock every 5 s with `dcgmi dmon`, and reads the throttle counters before and after. Power is heat, so this is the worst thermal case the GPUs see in service. The GPUs cannot be loaded harder than their power limit, only for longer.
+
+Limits of the `hgx-h100-8x` reference node, as DCGM reports them (identical on all 8 GPUs):
+
+| Limit | Value | What happens |
+|---|---|---|
+| GPU max operating temperature | 87 °C | rated ceiling for continuous work |
+| GPU slowdown | 89 °C | the hardware throttles clocks |
+| GPU shutdown | 95 °C | the GPU powers off |
+| HBM max operating temperature | 95 °C | |
+
+Driver 615 no longer prints absolute limits in `nvidia-smi -q`, only margins (`T.Limit`). DCGM fields 152, 158, 159 and 151 still give absolute values, so the gate reads those.
+
+The shipped thresholds keep a margin under those limits:
+- `fail` above 82 °C, which is 5 °C under max operating;
+- `warn` above 77 °C, which is 10 °C under;
+- HBM `fail` above 85 °C;
+- `warn` when one GPU runs more than 15 °C hotter than the coolest.
+
+GPU temperatures follow the inlet air temperature, which only the BMC reports (a later tier), so compare nodes in the same row.
+
+If the run is interrupted, `dcgmi diag` is killed, but a host engine the node already ran may finish the targeted_power test on its own, up to `burnin.minutes`. A rerun then refuses to start while the GPUs are busy (`prereq.gpus_idle`). The monitor (`dcgmi dmon -c`) stops by itself.
+
+The evidence directory gets `burnin-temperatures.csv` (seconds, then one column per GPU) for plotting. 30 minutes is enough to reach steady state. For new or repaired hardware, run a longer soak with `--burnin-minutes 240` or more. A multi-hour burn-in with mixed loads is tier L3.
 
 ## Runbook
 
@@ -204,13 +246,24 @@ Re-measure the floors on the first healthy nodes of each class. Never copy floor
 
 ## First hardware run
 
-The runner has only run against recorded output so far. The first run on a real node has to confirm the following:
+v0.1.0 ran on an 8x H100 SXM HGX node with 8 NDR rails, on Ubuntu 26.04, driver 615 (open kernel module) and DCGM 4.7.0. No hardware fault was found. The run confirmed or fixed the following.
 
-- **Synthetic parsers.** `lspci -D -vvv` ACS parsing and the `--use_cuda` GPUDirect path were checked only against synthetic samples. Confirm both, and check the `mokutil` and `ofed_info` output formats.
-- **Newer tool versions.** The recorded output is from nccl-tests 2.20.0 and DCGM 4.6.1, but the installer pins nccl-tests 2.21.1 and DCGM 4.8.0. Confirm the log header and the level-3 test names are unchanged.
-- **ACS on real switches.** Confirm the switch ports above the GPUs and NICs expose ACS controls; a node where none do fails with `error`.
-- **Loopback ring.** `ib_write_bw` loopback uses `127.0.0.1` for the connection exchange and the IB fabric for the data. Confirm all 8 rails report bandwidth.
-- **Signals through sudo.** Start the run with `sudo nohup bash gfv.sh …`, send SIGTERM to the `sudo` process, and confirm the run stops with exit 2.
-- **Host engine.** With the node's own DCGM service running, confirm the runner reuses it and does not start a second one.
-- **GPU0/1 PCIe finding.** Settle the 76 GB/s bidirectional PCIe on GPU 0 and GPU 1. A DCGM host-memory placement artifact means adjusting the check; otherwise it is a real fault.
-- **Manifest values.** Re-measure the floors. Set `secure_boot`, `pcie_acs` and `kernel_cmdline_contains` to what the class really runs, then fill the firmware allowlists from the recorded values.
+**Confirmed on hardware:**
+- **ACS parsing:** ACS controls are readable on the 24 PCIe switch ports above the 8 GPUs and 8 NICs.
+- **Output formats:** `mokutil --sb-state` and `ofed_info -s` parse as expected.
+- **Loopback ring:** all 8 rails report bandwidth.
+- **DCGM:** the 4.7 level-3 test names are unchanged, and the runner reused the node's own host engine.
+- **PCIe pattern:** GPU 0 and GPU 1 again had the lowest bidirectional PCIe bandwidth (67 GB/s here, 76 GB/s on the first reference node). One-way bandwidth is 53–55 GB/s on every GPU of both nodes, so the links are healthy and the dip is host-side. The check now gates on one-way bandwidth (`dcgm.pcie_oneway`).
+
+**Fixed after the run:**
+- **Driver 615 banner:** `nvidia-smi` prints `KMD Version` and `CUDA UMD Version`. The parser reads both layouts and falls back to the per-GPU driver version. An unreadable value is now `error`, never a `fail` with an empty value.
+- **Fabric Manager on hold:** the package is installed but held (`hi`). It now counts as installed.
+- **GPUDirect:** `nvidia_peermem` was not loaded, so the peermem path could not register GPU memory (`error=14`). The GPUDirect check now tries DMA-BUF first.
+- **NCCL pin:** the pinned NCCL 2.28.9 does not exist in NVIDIA's Ubuntu 26.04 repo, which has 2.30.7–2.32.3. The manifest now pins 2.32.3, and the install error lists what the repo offers.
+- **RDMA placement:** two RDMA pairs measured 327 and 335 Gb/s, while the rest of the ring measured 353–367 Gb/s. The test ran unpinned on a 4-NUMA-node host. Server and client now run on the NIC's local CPUs.
+- **Manifest:** the manifest now describes this node: 4 NUMA nodes, IOMMU in translated mode, Secure Boot off, no `nvidia_peermem` requirement. It also adds the power limit, the temperature limits and the burn-in.
+
+**Still open:**
+- Signals through sudo: start with `sudo nohup bash gfv.sh …`, send SIGTERM to `sudo`, and expect exit 2.
+- nccl-tests 2.21.1 against NCCL 2.32.
+- The RDMA and NCCL floors on the new node.

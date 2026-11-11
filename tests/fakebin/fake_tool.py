@@ -11,12 +11,14 @@ import os
 import sys
 
 TOOL, ARGS = sys.argv[1], sys.argv[2:]
+if TOOL == "taskset" and ARGS[:1] == ["-c"]:     # taskset -c <cpus> <cmd...>: logged, then run the wrapped tool
+    TOOL, ARGS = ARGS[2], ARGS[3:]
 SCEN = os.environ["GFV_FAKE_DIR"]
 STATE = os.environ["GFV_FAKE_STATE"]
 ROOT = os.environ.get("GFV_SYSROOT", "/nonexistent")
 
 with open(os.path.join(STATE, "calls.log"), "a") as f:
-    f.write(json.dumps([TOOL, *ARGS, {"cwd": os.getcwd()}]) + "\n")
+    f.write(json.dumps([*sys.argv[1:], {"cwd": os.getcwd()}]) + "\n")
 
 
 def fixture(name):
@@ -60,6 +62,10 @@ def nvidia_smi():
     if not ARGS:
         out(fixture("nvidia-smi.txt"))
     a = ARGS[0]
+    if a == "--query-gpu=index,enforced.power.limit":
+        out(fixture("power-limit.csv"))
+    if a.startswith("--query-gpu=index,clocks_event_reasons_counters."):     # changes only across the burn-in
+        out(fixture("throttle-after.csv" if marker("burnin-done") and has("throttle-after.csv") else "throttle.csv"))
     if a.startswith("--query-gpu="):
         want = fixture("gpus.fields").strip()
         if a.split("=", 1)[1] != want:
@@ -87,9 +93,18 @@ def dcgmi():
         out("Error: unable to establish a connection to the specified host: localhost\n", 255)
     if ARGS[:2] == ["discovery", "-l"]:
         out(fixture("dcgmi-discovery.txt"))
+    if ARGS[:3] == ["diag", "-r", "targeted_power"]:
+        after_load()
+        touch("burnin-done")
+        name = "dcgm-targeted-power.json" if has("dcgm-targeted-power.json") else "dcgm-diag-r3.json"
+        out(fixture(name))
     if ARGS[:1] == ["diag"]:
         after_load()
         out(fixture("dcgm-diag-r3.json"), 226 if has("dcgm-rc-fail") else 0)
+    if ARGS[:1] == ["dmon"] and "-d" not in ARGS:      # one-shot read of the temperature limits
+        out(fixture("dcgmi-dmon-limits.txt"))
+    if ARGS[:1] == ["dmon"]:                      # the burn-in monitor: print the scenario's telemetry, then exit
+        out(fixture("dcgmi-dmon-burnin.txt") if has("dcgmi-dmon-burnin.txt") else "#Entity TMPTR\n")
     out(f"fake dcgmi: unhandled {ARGS}\n", 9)
 
 
@@ -99,6 +114,9 @@ def ib_write_bw():
     if ARGS[-1] != "127.0.0.1":
         out("server done\n")                      # server side: the client prints the numbers
     dev = ARGS[ARGS.index("-d") + 1]
+    gdr = any(a.startswith("--use_cuda=") for a in ARGS)
+    if gdr and (has("gdr-fail") or ("--use_cuda_dmabuf" in ARGS and has("gdr-dmabuf-fail"))):
+        out("Couldn't allocate MR with error=14\nfailed to create mr\n Couldn't create IB resources\n", 1)
     bw = json.loads(fixture("rdma-bw.json"))
     if dev in bw.get("unreachable", []):
         out("Couldn't connect to 127.0.0.1:18515\nUnable to init the socket connection\n", 1)

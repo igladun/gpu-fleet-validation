@@ -160,6 +160,15 @@ class TestFreshNode(InstallCase):
         ctx = self.ctx(cuda="13.0", nccl="2.99.0")
         self.install(ctx)
         self.assertEqual([e[0] for e in self.errors(ctx)], ["install.nccl"])
+        self.assertIn("2.28.9-1+cuda13.0", self.errors(ctx)[0][1])     # lists what the repo offers for CUDA 13
+        self.assertIsNone(ctx.nccl_tests)
+
+    def test_unknown_cuda_version_skips_nccl_with_clear_error(self):
+        ctx = self.ctx(cuda=None)
+        self.install(ctx)
+        self.assertEqual([e[0] for e in self.errors(ctx)], ["install.cuda_version"])
+        self.assertFalse(any(c[:2] == ["apt-cache", "madison"] for c in self.node.calls()))
+        self.assertFalse(any(p.startswith("datacenter-gpu-manager") for p in self.apt_installs()))
         self.assertIsNone(ctx.nccl_tests)
 
     def test_unsupported_distro(self):

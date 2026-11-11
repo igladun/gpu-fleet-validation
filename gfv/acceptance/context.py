@@ -93,6 +93,9 @@ def discover(ctx):
     f["smi_why"] = hdr.why()
     f.update(parse.smi_header(hdr.out))
     f["gpus"] = query_gpus(ctx, "nvidia-smi-query-gpu")
+    if not f.get("driver"):        # banner format changed: the per-GPU query still carries the driver version
+        drivers = {g["driver_version"] for g in f["gpus"] if g.get("driver_version")}
+        f["driver"] = drivers.pop() if len(drivers) == 1 else None
     tp = ctx.run("nvidia-smi-topo", ["nvidia-smi", "topo", "-m"], timeout=60)
     f["topo"] = parse.topo(tp.out) if tp.ok else None
     f["ib"] = ib_devices(ctx.sys)

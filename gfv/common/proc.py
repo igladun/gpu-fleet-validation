@@ -106,6 +106,12 @@ class _Background:
         self.proc, self.name, self.cmd, self.p, self.fh = proc, name, cmd, popen, fh
         self.start = time.monotonic()
 
+    def stop(self, timeout=10):
+        """End a process that runs until told to (a monitor such as `dcgmi dmon`)."""
+        if self.p.poll() is None:
+            self.p.terminate()
+        return self.finish(timeout)
+
     def finish(self, timeout=15):
         try:
             rc = self.p.wait(timeout=timeout)

@@ -40,6 +40,7 @@ def run(ctx):
         ctx.add("inventory.persistence_mode", "pass", None, "Enabled", "Enabled")
 
     pcie_widths(ctx)
+    power_limit(ctx)
     numa = len(ctx.sys.glob("/sys/devices/system/node/node[0-9]*"))
     _eq(ctx, "inventory.numa_nodes", numa, spec["numa_nodes"])
     host(ctx)
@@ -91,11 +92,15 @@ def host(ctx):
                     state, h["secure_boot"], evidence="raw/mokutil.out")
     if "pcie_acs" in h:
         acs(ctx, h["pcie_acs"])
+    loaded = any(line.split()[:1] == ["nvidia_peermem"]
+                 for line in (ctx.sys.read("/proc/modules", "") or "").splitlines())
     if "nvidia_peermem" in h:
-        loaded = any(line.split()[:1] == ["nvidia_peermem"]
-                     for line in (ctx.sys.read("/proc/modules", "") or "").splitlines())
         ctx.add("inventory.nvidia_peermem", "pass" if loaded == h["nvidia_peermem"] else "fail", None,
                 loaded, h["nvidia_peermem"], "" if loaded else "GPUDirect RDMA module not loaded")
+    else:
+        ctx.add("inventory.nvidia_peermem", "info", None, loaded, None,
+                "not required by the manifest; with host.gpudirect, rdma.gdr_write_bw tests GPUDirect "
+                "(DMA-BUF or peermem)")
     if "power_profile" in h:
         ctx.add("inventory.power_profile", "skip", None, None, h["power_profile"], LATER_TIER)
 
@@ -175,4 +180,35 @@ def firmware(ctx):
 
 
 def _eq(ctx, check, value, expected, detail="", evidence=None):
+    if value is None:
+        ctx.add(check, "error", None, None, expected, "could not read the value" + (f"; {detail}" if detail else ""),
+                evidence)
+        return
     ctx.add(check, "pass" if value == expected else "fail", None, value, expected, detail, evidence)
+
+
+def power_limit(ctx):
+    """Enforced power limit of every GPU equals the class value: a lower cap silently costs performance."""
+    want = ctx.spec.get("gpu_power_limit_w")
+    if want is None:
+        return
+    q = ctx.run("nvidia-smi-power-limit", ["nvidia-smi", "--query-gpu=index,enforced.power.limit",
+                                           "--format=csv,noheader,nounits"], timeout=60)
+    if not q.ok:
+        ctx.add("inventory.power_limit", "error", None, None, want, q.why(), q.evidence)
+        return
+    limits = {i: (v[0] if v else None) for i, v in parse.gpu_values(q.out).items()}
+    ctx.facts["power_limits"] = limits
+    bad = 0
+    for g in ctx.facts["gpus"]:
+        idx = parse.as_int(g["index"])
+        w = limits.get(idx)
+        if w is None:
+            bad += 1
+            ctx.add("inventory.power_limit", "error", f"GPU{idx}", None, want, "power limit unreadable", q.evidence)
+        elif abs(w - want) > 0.5:
+            bad += 1
+            ctx.add("inventory.power_limit", "fail", f"GPU{idx}", w, want,
+                    "W; capped below the class limit" if w < want else "W; above the class limit", q.evidence)
+    if not bad and ctx.facts["gpus"]:
+        ctx.add("inventory.power_limit", "pass", None, want, want, f"W on {len(ctx.facts['gpus'])} GPUs", q.evidence)

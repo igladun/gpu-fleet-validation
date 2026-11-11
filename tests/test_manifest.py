@@ -28,9 +28,29 @@ class TestManifest(unittest.TestCase):
             return json.load(f)
 
     @unittest.skipUnless(tomllib, "reading TOML needs Python 3.11+")
-    def test_json_copy_matches_shipped_toml(self):
+    def test_shipped_toml_validates_with_power_thermal_and_burnin(self):
         with open(os.path.join(REPO, "manifests", "hgx-h100-8x.toml"), "rb") as f:
-            self.assertEqual(tomllib.load(f), self.base())
+            spec = tomllib.load(f)["class"]["hgx-h100-8x"]
+        manifest.validate("hgx-h100-8x", spec)
+        self.assertEqual(spec["gpu_power_limit_w"], 700)
+        self.assertEqual(spec["thermal"]["gpu_max_operating_c"], 87)
+        self.assertLess(spec["burnin"]["gpu_temp_max_c"], spec["thermal"]["gpu_max_operating_c"])
+        self.assertLess(spec["burnin"]["mem_temp_max_c"], spec["thermal"]["mem_max_operating_c"])
+
+    def test_thermal_and_burnin_keys_are_checked(self):
+        for table, key, value, msg in (("thermal", "gpu_max_operating", 87, "unknown thermal.gpu_max_operating"),
+                                       ("thermal", "gpu_slowdown_c", "89", "thermal.gpu_slowdown_c must be a number"),
+                                       ("burnin", "minutes", 0, "burnin.minutes has an invalid value"),
+                                       ("burnin", "gpu_temp_max", 82, "unknown burnin.gpu_temp_max")):
+            doc = self.base()
+            doc["class"]["hgx-h100-8x"][table] = {key: value}
+            with self.assertRaises(manifest.ManifestError) as e:
+                manifest.load(self.write(doc))
+            self.assertIn(msg, str(e.exception))
+        doc = self.base()
+        doc["class"]["hgx-h100-8x"]["gpu_power_limit_w"] = True
+        with self.assertRaises(manifest.ManifestError):
+            manifest.load(self.write(doc))
 
     @unittest.skipUnless(tomllib, "reading TOML needs Python 3.11+")
     def test_checkout_lists_shipped_classes(self):
